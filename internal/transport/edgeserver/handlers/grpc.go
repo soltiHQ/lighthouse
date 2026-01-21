@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// Grpc implements the gRPC discovery service.
+// Grpc implements the gRPC edge service.
 type Grpc struct {
 	discoverv1.UnimplementedDiscoverServiceServer
 
@@ -22,7 +22,7 @@ type Grpc struct {
 	storage storage.Storage
 }
 
-// NewGrpc creates a new gRPC discovery handler.
+// NewGrpc creates a new gRPC edge handler.
 func NewGrpc(logger zerolog.Logger, storage storage.Storage) *Grpc {
 	return &Grpc{
 		logger: logger.With().

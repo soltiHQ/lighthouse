@@ -101,7 +101,7 @@ func (s *EdgeServer) Run(ctx context.Context) error {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		s.shutdown(shutdownCtx)
-		return ctx.Err()
+		return nil
 
 	case err := <-errCh:
 		if err != nil {

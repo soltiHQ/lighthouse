@@ -1,4 +1,4 @@
-package edgeserver
+package apiserver
 
 import (
 	"time"
@@ -14,13 +14,6 @@ type Option func(*Config)
 func WithHTTPAddr(addr string) Option {
 	return func(c *Config) {
 		c.addrHTTP = addr
-	}
-}
-
-// WithGRPCAddr enables the gRPC sync endpoint on the given address.
-func WithGRPCAddr(addr string) Option {
-	return func(c *Config) {
-		c.addrGRPC = addr
 	}
 }
 
@@ -59,37 +52,9 @@ func WithHTTPIdleTimeout(d time.Duration) Option {
 	}
 }
 
-// WithGRPCConnectionTimeout sets the maximum time allowed to establish a new gRPC connection.
-func WithGRPCConnectionTimeout(d time.Duration) Option {
-	return func(c *Config) {
-		c.configGRPC.ConnectionTimeout = d
-	}
-}
-
-// WithGRPCMaxRecvMsgSize sets the maximum size of incoming gRPC messages in bytes.
-func WithGRPCMaxRecvMsgSize(size int) Option {
-	return func(c *Config) {
-		c.configGRPC.Limits.MaxRecvMsgSize = size
-	}
-}
-
-// WithGRPCMaxSendMsgSize sets the maximum size of outgoing gRPC messages in bytes.
-func WithGRPCMaxSendMsgSize(size int) Option {
-	return func(c *Config) {
-		c.configGRPC.Limits.MaxSendMsgSize = size
-	}
-}
-
 // WithHTTPMiddlewareConfig sets the HTTP middleware chain configuration.
 func WithHTTPMiddlewareConfig(config middleware.HttpChainConfig) Option {
 	return func(c *Config) {
 		c.configHTTP.Middleware = config
-	}
-}
-
-// WithGRPCMiddlewareConfig sets the gRPC middleware chain configuration.
-func WithGRPCMiddlewareConfig(config middleware.GrpcChainConfig) Option {
-	return func(c *Config) {
-		c.configGRPC.Middleware = config
 	}
 }

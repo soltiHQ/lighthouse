@@ -14,13 +14,13 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Http implements the HTTP discovery service.
+// Http implements the HTTP edge service.
 type Http struct {
 	logger  zerolog.Logger
 	storage storage.Storage
 }
 
-// NewHttp creates a new HTTP discovery handler.
+// NewHttp creates a new HTTP edge handler.
 func NewHttp(logger zerolog.Logger, storage storage.Storage) *Http {
 	return &Http{
 		logger: logger.With().
