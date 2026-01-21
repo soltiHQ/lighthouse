@@ -3,6 +3,7 @@ module github.com/soltiHQ/control-plane
 go 1.25
 
 require (
+	github.com/felixge/httpsnoop v1.0.4
 	github.com/rs/zerolog v1.34.0
 	github.com/segmentio/ksuid v1.0.4
 	google.golang.org/grpc v1.78.0

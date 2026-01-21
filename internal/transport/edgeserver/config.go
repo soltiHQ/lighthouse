@@ -6,16 +6,18 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Config represents the configuration for the edge server.
 type Config struct {
-	addrHTTP string
-	addrGRPC string
-
 	configHTTP config.HttpConfig
 	configGRPC config.GrpcConfig
+
+	addrHTTP string
+	addrGRPC string
 
 	logLevel zerolog.Level
 }
 
+// NewConfig creates a new configuration instance.
 func NewConfig(opts ...Option) Config {
 	cfg := Config{
 		configHTTP: config.NewHttpConfig(),

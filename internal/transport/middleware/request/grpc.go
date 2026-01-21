@@ -11,12 +11,7 @@ import (
 
 // UnaryRequestID attaches a request ID to the context and propagates it via gRPC metadata.
 func UnaryRequestID() grpc.UnaryServerInterceptor {
-	return func(
-		ctx context.Context,
-		req any,
-		info *grpc.UnaryServerInfo,
-		handler grpc.UnaryHandler,
-	) (any, error) {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		var requestID string
 
 		if md, ok := metadata.FromIncomingContext(ctx); ok {
@@ -24,14 +19,14 @@ func UnaryRequestID() grpc.UnaryServerInterceptor {
 				requestID = vals[0]
 			}
 		}
-
 		if requestID == "" {
 			requestID = newRequestID()
 		}
-
-		ctx = transportctx.WithRequestID(ctx, requestID)
-		ctx = metadata.AppendToOutgoingContext(ctx, mdRequestIDKey, requestID)
-
+		ctx = metadata.AppendToOutgoingContext(
+			transportctx.WithRequestID(ctx, requestID),
+			mdRequestIDKey,
+			requestID,
+		)
 		return handler(ctx, req)
 	}
 }

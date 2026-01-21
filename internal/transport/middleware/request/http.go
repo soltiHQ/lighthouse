@@ -17,7 +17,6 @@ func RequestID() func(http.Handler) http.Handler {
 
 			ctx := transportctx.WithRequestID(r.Context(), requestID)
 			w.Header().Set(headerRequestID, requestID)
-
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
