@@ -4,6 +4,7 @@ go 1.25
 
 require (
 	github.com/rs/zerolog v1.34.0
+	github.com/segmentio/ksuid v1.0.4
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
 )

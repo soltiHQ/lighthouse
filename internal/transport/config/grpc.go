@@ -1,5 +1,4 @@
-// Package grpcconfig defines reusable GRPC api configuration primitives.
-package grpcconfig
+package config
 
 import "time"
 
@@ -20,16 +19,16 @@ type Limits struct {
 	MaxSendMsgSize int
 }
 
-// Config holds a common gRPC-related configuration shared by different transport surfaces.
-type Config struct {
+// GrpcConfig holds a common gRPC-related configuration shared by different transport surfaces.
+type GrpcConfig struct {
 	Limits Limits
 	// ConnectionTimeout is how long we wait for a new connection / handshake.
 	ConnectionTimeout time.Duration
 }
 
-// New returns a Config initialized with package defaults.
-func New() Config {
-	return Config{
+// NewGrpcConfig returns a Config initialized with package defaults.
+func NewGrpcConfig() GrpcConfig {
+	return GrpcConfig{
 		Limits: Limits{
 			MaxRecvMsgSize: DefaultMaxRecvMsgSize,
 			MaxSendMsgSize: DefaultMaxSendMsgSize,

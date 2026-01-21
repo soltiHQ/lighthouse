@@ -9,7 +9,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/backend"
 	"github.com/soltiHQ/control-plane/internal/logctx"
 	"github.com/soltiHQ/control-plane/internal/storage"
-	"github.com/soltiHQ/control-plane/internal/transport/httpresponse"
+	"github.com/soltiHQ/control-plane/internal/transport/response"
 
 	"github.com/rs/zerolog"
 )
@@ -30,7 +30,7 @@ func NewHttp(logger zerolog.Logger, storage storage.Storage) *Http {
 	}
 }
 
-// Sync handles HTTP Sync requests from agents.
+// Sync handles HTTP Sync request from agents.
 func (h *Http) Sync(w http.ResponseWriter, r *http.Request) {
 	var (
 		ctx    = r.Context()
@@ -38,7 +38,7 @@ func (h *Http) Sync(w http.ResponseWriter, r *http.Request) {
 	)
 	if r.Method != http.MethodPost {
 		logger.Warn().Str("method", r.Method).Msg("invalid method")
-		if err := httpresponse.NotAllowed(ctx, w, "method not supported"); err != nil {
+		if err := response.NotAllowed(ctx, w, "method not supported"); err != nil {
 			logctx.Error(ctx, h.logger, err, "failed to write not-allowed response")
 		}
 		return
@@ -47,7 +47,7 @@ func (h *Http) Sync(w http.ResponseWriter, r *http.Request) {
 	var req discoverv1.SyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Warn().Err(err).Msg("failed to decode sync request payload")
-		if err = httpresponse.BadRequest(ctx, w, "invalid JSON payload"); err != nil {
+		if err = response.BadRequest(ctx, w, "invalid JSON payload"); err != nil {
 			logctx.Error(ctx, h.logger, err, "failed to write bad-request response")
 		}
 		return
@@ -55,13 +55,13 @@ func (h *Http) Sync(w http.ResponseWriter, r *http.Request) {
 	agent, err := domain.NewAgentModel(&req)
 	if err != nil {
 		logger.Warn().Err(err).Msg("invalid sync request payload")
-		if err = httpresponse.BadRequest(ctx, w, "invalid agent data"); err != nil {
+		if err = response.BadRequest(ctx, w, "invalid agent data"); err != nil {
 			logctx.Error(ctx, h.logger, err, "failed to write bad-request response")
 		}
 		return
 	}
 	if err = backend.Discovery(ctx, logger, h.storage, agent); err != nil {
-		if err = httpresponse.InternalError(ctx, w, "internal error"); err != nil {
+		if err = response.InternalError(ctx, w, "internal error"); err != nil {
 			logctx.Error(ctx, h.logger, err, "failed to write internal-error response")
 		}
 		return
@@ -71,7 +71,7 @@ func (h *Http) Sync(w http.ResponseWriter, r *http.Request) {
 		Message:  "ok",
 		Metadata: map[string]string{"type": "ok"},
 	}
-	if err = httpresponse.OK(ctx, w, resp); err != nil {
+	if err = response.OK(ctx, w, resp); err != nil {
 		logctx.Error(ctx, h.logger, err, "failed to write ok response")
 	}
 }

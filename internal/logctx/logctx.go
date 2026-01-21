@@ -5,8 +5,7 @@ import (
 	"context"
 
 	"github.com/rs/zerolog"
-
-	"github.com/soltiHQ/control-plane/internal/transport/transportctx"
+	"github.com/soltiHQ/control-plane/internal/transportctx"
 )
 
 // From returns a logger enriched with context-derived fields.

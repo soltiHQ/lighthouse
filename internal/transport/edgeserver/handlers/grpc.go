@@ -32,7 +32,7 @@ func NewGrpc(logger zerolog.Logger, storage storage.Storage) *Grpc {
 	}
 }
 
-// Sync handles gRPC Sync requests from agents.
+// Sync handles gRPC Sync request from agents.
 func (g *Grpc) Sync(ctx context.Context, req *discoverv1.SyncRequest) (*discoverv1.SyncResponse, error) {
 	logger := logctx.From(ctx, g.logger)
 

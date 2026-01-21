@@ -1,12 +1,11 @@
-// Package httpresponse provides helpers for writing JSON HTTP responses.
-package httpresponse
+package response
 
 import (
 	"context"
 	"encoding/json"
 	"net/http"
 
-	"github.com/soltiHQ/control-plane/internal/transport/transportctx"
+	"github.com/soltiHQ/control-plane/internal/transportctx"
 )
 
 // ErrorResponse is an API-safe error envelope.

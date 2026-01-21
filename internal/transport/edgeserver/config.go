@@ -1,8 +1,7 @@
 package edgeserver
 
 import (
-	"github.com/soltiHQ/control-plane/internal/transport/grpcconfig"
-	"github.com/soltiHQ/control-plane/internal/transport/httpconfig"
+	"github.com/soltiHQ/control-plane/internal/transport/config"
 
 	"github.com/rs/zerolog"
 )
@@ -11,16 +10,16 @@ type Config struct {
 	addrHTTP string
 	addrGRPC string
 
-	configHTTP httpconfig.Config
-	configGRPC grpcconfig.Config
+	configHTTP config.HttpConfig
+	configGRPC config.GrpcConfig
 
 	logLevel zerolog.Level
 }
 
 func NewConfig(opts ...Option) Config {
 	cfg := Config{
-		configHTTP: httpconfig.New(),
-		configGRPC: grpcconfig.New(),
+		configHTTP: config.NewHttpConfig(),
+		configGRPC: config.NewGrpcConfig(),
 		logLevel:   zerolog.InfoLevel,
 	}
 	for _, opt := range opts {

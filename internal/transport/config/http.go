@@ -1,5 +1,4 @@
-// Package httpconfig defines reusable HTTP api configuration primitives.
-package httpconfig
+package config
 
 import (
 	"time"
@@ -28,14 +27,14 @@ type Timeouts struct {
 	Idle time.Duration
 }
 
-// Config holds common HTTP-related configuration shared by different transport surfaces.
-type Config struct {
+// HttpConfig holds common HTTP-related configuration shared by different transport surfaces.
+type HttpConfig struct {
 	Timeouts Timeouts
 }
 
-// New returns a Config initialized with the package defaults.
-func New() Config {
-	return Config{
+// NewHttpConfig returns a Config initialized with the package defaults.
+func NewHttpConfig() HttpConfig {
+	return HttpConfig{
 		Timeouts: Timeouts{
 			ReadHeader: DefaultReadHeaderTimeout,
 			Read:       DefaultReadTimeout,

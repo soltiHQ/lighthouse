@@ -35,7 +35,7 @@ type AgentStore interface {
 	// Results are ordered by (UpdatedAt DESC, ID ASC) to ensure:
 	//   - Recently updated agents appear first.
 	//   - Stable ordering when UpdatedAt values are identical.
-	//   - Cursor-based pagination works correctly across requests.
+	//   - Cursor-based pagination works correctly across request.
 	//
 	// The filter parameter is implementation-specific. Pass nil to retrieve all agents.
 	// Use filter constructors from the concrete storage package (e.g., inmemory.NewFilter()).
