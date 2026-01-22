@@ -1,39 +1,33 @@
 package handlers
 
 import (
-	"html/template"
 	"net/http"
 
 	"github.com/rs/zerolog"
-	"github.com/soltiHQ/control-plane/internal/logctx"
 )
 
-// Pages represent the pages handler.
 type Pages struct {
-	logger    zerolog.Logger
-	templates *template.Template
+	logger   zerolog.Logger
+	renderer Renderer
 }
 
-// NewPages creates a new pages handler.
-func NewPages(logger zerolog.Logger, tmpl *template.Template) *Pages {
+func NewPages(logger zerolog.Logger, renderer Renderer) *Pages {
 	return &Pages{
-		logger:    logger.With().Str("type", "pages").Logger(),
-		templates: tmpl,
+		logger:   logger.With().Str("handler", "pages").Logger(),
+		renderer: renderer,
 	}
 }
 
 func (p *Pages) Home(w http.ResponseWriter, r *http.Request) {
-	var (
-		ctx    = r.Context()
-		logger = logctx.From(ctx, p.logger)
-	)
-
-	data := map[string]any{
-		"Title": "Home Page",
+	type ViewData struct {
+		Title string
 	}
 
-	if err := p.templates.ExecuteTemplate(w, "base", data); err != nil {
-		logger.Error().Err(err).Msg("failed to render home template")
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	if err := p.renderer.Render(w, "home.html", ViewData{
+		Title: "Control Plane",
+	}); err != nil {
+		p.logger.Error().Err(err).Msg("failed to render home page")
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
 }

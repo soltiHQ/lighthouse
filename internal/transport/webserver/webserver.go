@@ -4,56 +4,44 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"html/template"
 	"net/http"
 	"time"
 
-	"github.com/soltiHQ/control-plane/internal/transport/middleware"
-	"github.com/soltiHQ/control-plane/internal/transport/webserver/handlers"
-	"github.com/soltiHQ/control-plane/ui"
-
 	"github.com/rs/zerolog"
+	"github.com/soltiHQ/control-plane/internal/transport/middleware"
 )
 
-// WebServer is a HTTP api server.
+// WebServer is an HTTP UI server.
 type WebServer struct {
 	http *http.Server
 
-	logger    zerolog.Logger
-	templates *template.Template
+	logger zerolog.Logger
+	cfg    Config
+	render *renderer
 }
 
-// NewApiServer creates a new api server instance.
-func NewApiServer(cfg Config, logger zerolog.Logger) *WebServer {
+// NewWebServer creates a new web UI server instance.
+func NewWebServer(cfg Config, logger zerolog.Logger) *WebServer {
 	logger = logger.Level(cfg.logLevel)
 
-	templates, err := template.ParseFS(ui.Templates, "templates/**/*.html")
+	r, err := newRenderer(logger)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("web server: failed to parse templates")
+		logger.Fatal().Err(err).Msg("web server: renderer init failed")
 	}
-
 	s := &WebServer{
-		logger:    logger.With().Str("server", "web").Logger(),
-		templates: templates,
+		logger: logger.With().Str("server", "web").Logger(),
+		cfg:    cfg,
+		render: r,
 	}
 	if cfg.addrHTTP != "" {
-		var (
-			handlerPage   = handlers.NewPages(logger, templates)
-			handlerStatic = handlers.NewStatic(logger)
-			mux           = http.NewServeMux()
-		)
-		mux.HandleFunc("GET /static/", handlerStatic.Serve)
-		mux.HandleFunc("GET /", handlerPage.Home)
-
 		s.http = &http.Server{
+			Addr:              cfg.addrHTTP,
 			ReadHeaderTimeout: cfg.configHTTP.Timeouts.ReadHeader,
 			ReadTimeout:       cfg.configHTTP.Timeouts.Read,
 			WriteTimeout:      cfg.configHTTP.Timeouts.Write,
 			IdleTimeout:       cfg.configHTTP.Timeouts.Idle,
-			Addr:              cfg.addrHTTP,
-
 			Handler: middleware.HttpChain(
-				mux,
+				s.router(),
 				logger,
 				cfg.configHTTP.Middleware,
 			),
@@ -85,7 +73,7 @@ func (s *WebServer) Run(ctx context.Context) error {
 
 	case err := <-errCh:
 		if err != nil {
-			s.logger.Error().Err(err).Msg("api server: transport terminated with error")
+			s.logger.Error().Err(err).Msg("web server: transport terminated with error")
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 			s.shutdown(shutdownCtx)
