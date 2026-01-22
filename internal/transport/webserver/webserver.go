@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"time"
 
 	"github.com/soltiHQ/control-plane/internal/transport/middleware"
+	"github.com/soltiHQ/control-plane/internal/transport/webserver/handlers"
+	"github.com/soltiHQ/control-plane/ui"
 
 	"github.com/rs/zerolog"
 )
@@ -16,22 +19,31 @@ import (
 type WebServer struct {
 	http *http.Server
 
-	logger zerolog.Logger
+	logger    zerolog.Logger
+	templates *template.Template
 }
 
 // NewApiServer creates a new api server instance.
 func NewApiServer(cfg Config, logger zerolog.Logger) *WebServer {
 	logger = logger.Level(cfg.logLevel)
 
+	templates, err := template.ParseFS(ui.Templates, "templates/**/*.html")
+	if err != nil {
+		logger.Fatal().Err(err).Msg("web server: failed to parse templates")
+	}
+
 	s := &WebServer{
-		logger: logger.With().Str("server", "web").Logger(),
+		logger:    logger.With().Str("server", "web").Logger(),
+		templates: templates,
 	}
 	if cfg.addrHTTP != "" {
 		var (
-			//handler = handlers.NewHttp(logger, storage)
-			mux = http.NewServeMux()
+			handlerPage   = handlers.NewPages(logger, templates)
+			handlerStatic = handlers.NewStatic(logger)
+			mux           = http.NewServeMux()
 		)
-		//mux.HandleFunc("GET /v1/agents/", handler.AgentList)
+		mux.HandleFunc("GET /static/", handlerStatic.Serve)
+		mux.HandleFunc("GET /", handlerPage.Home)
 
 		s.http = &http.Server{
 			ReadHeaderTimeout: cfg.configHTTP.Timeouts.ReadHeader,
