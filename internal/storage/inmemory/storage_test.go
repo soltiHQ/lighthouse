@@ -37,6 +37,17 @@ func newTestAgent(t *testing.T, id, platform, osName, arch string, labels map[st
 	return a
 }
 
+// newTestUser creates a user model for testing with minimal fields.
+func newTestUser(t *testing.T, id, subject string) *domain.UserModel {
+	t.Helper()
+
+	u, err := domain.NewUserModel(id, subject)
+	if err != nil {
+		t.Fatalf("NewUserModel(%q, %q) failed: %v", id, subject, err)
+	}
+	return u
+}
+
 // TestStore_UpsertAndGetAgent verifies basic create and retrieve operations.
 func TestStore_UpsertAndGetAgent(t *testing.T) {
 	ctx := context.Background()
@@ -414,6 +425,312 @@ func TestStore_DeleteAgent_EmptyID(t *testing.T) {
 	err := s.DeleteAgent(ctx, "")
 	if err == nil {
 		t.Fatal("DeleteAgent(\"\") should return error")
+	}
+	if !stdErrors.Is(err, storage.ErrInvalidArgument) {
+		t.Errorf("expected ErrInvalidArgument, got %v", err)
+	}
+}
+
+// TestStore_UpsertAndGetUser verifies basic create and retrieve operations.
+func TestStore_UpsertAndGetUser(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	original := newTestUser(t, "user-1", "sub-1")
+
+	if err := s.UpsertUser(ctx, original); err != nil {
+		t.Fatalf("UpsertUser() failed: %v", err)
+	}
+	retrieved, err := s.GetUser(ctx, "user-1")
+	if err != nil {
+		t.Fatalf("GetUser() failed: %v", err)
+	}
+	if retrieved == original {
+		t.Error("GetUser() should return a clone, not the original instance")
+	}
+	if retrieved.ID() != original.ID() {
+		t.Errorf("ID mismatch: got %q, want %q", retrieved.ID(), original.ID())
+	}
+	if retrieved.Subject() != original.Subject() {
+		t.Errorf("Subject mismatch: got %q, want %q", retrieved.Subject(), original.Subject())
+	}
+}
+
+// TestStore_GetUser_NotFound verifies proper error for missing users.
+func TestStore_GetUser_NotFound(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	_, err := s.GetUser(ctx, "nonexistent")
+	if err == nil {
+		t.Fatal("GetUser() should return error for missing user")
+	}
+	if !stdErrors.Is(err, storage.ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
+	}
+}
+
+// TestStore_GetUser_EmptyID verifies rejection of empty IDs.
+func TestStore_GetUser_EmptyID(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	_, err := s.GetUser(ctx, "")
+	if err == nil {
+		t.Fatal("GetUser(\"\") should return error")
+	}
+	if !stdErrors.Is(err, storage.ErrInvalidArgument) {
+		t.Errorf("expected ErrInvalidArgument, got %v", err)
+	}
+}
+
+// TestStore_GetUserBySubject verifies subject-based retrieval.
+func TestStore_GetUserBySubject(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	u1 := newTestUser(t, "user-1", "subject-1")
+	u2 := newTestUser(t, "user-2", "subject-2")
+
+	for _, u := range []*domain.UserModel{u1, u2} {
+		if err := s.UpsertUser(ctx, u); err != nil {
+			t.Fatalf("UpsertUser() failed: %v", err)
+		}
+	}
+	retrieved, err := s.GetUserBySubject(ctx, "subject-1")
+	if err != nil {
+		t.Fatalf("GetUserBySubject() failed: %v", err)
+	}
+	if retrieved.ID() != "user-1" {
+		t.Errorf("expected user-1, got %s", retrieved.ID())
+	}
+	if retrieved.Subject() != "subject-1" {
+		t.Errorf("expected subject-1, got %s", retrieved.Subject())
+	}
+}
+
+// TestStore_GetUserBySubject_NotFound verifies proper error for missing subject.
+func TestStore_GetUserBySubject_NotFound(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	_, err := s.GetUserBySubject(ctx, "nonexistent-subject")
+	if err == nil {
+		t.Fatal("GetUserBySubject() should return error for missing subject")
+	}
+	if !stdErrors.Is(err, storage.ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
+	}
+}
+
+// TestStore_GetUserBySubject_EmptySubject verifies rejection of empty subject.
+func TestStore_GetUserBySubject_EmptySubject(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	_, err := s.GetUserBySubject(ctx, "")
+	if err == nil {
+		t.Fatal("GetUserBySubject(\"\") should return error")
+	}
+	if !stdErrors.Is(err, storage.ErrInvalidArgument) {
+		t.Errorf("expected ErrInvalidArgument, got %v", err)
+	}
+}
+
+// TestStore_ListUsers_EmptyStore verifies behavior with no users.
+func TestStore_ListUsers_EmptyStore(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	result, err := s.ListUsers(ctx, nil, storage.ListOptions{})
+	if err != nil {
+		t.Fatalf("ListUsers() failed: %v", err)
+	}
+	if result.Items != nil && len(result.Items) != 0 {
+		t.Errorf("expected nil or empty slice, got %d users", len(result.Items))
+	}
+	if result.NextCursor != "" {
+		t.Errorf("expected empty NextCursor, got %q", result.NextCursor)
+	}
+}
+
+// TestStore_ListUsers_AllUsers verifies listing without filters.
+func TestStore_ListUsers_AllUsers(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	u1 := newTestUser(t, "user-1", "sub-1")
+	u2 := newTestUser(t, "user-2", "sub-2")
+
+	for _, u := range []*domain.UserModel{u1, u2} {
+		if err := s.UpsertUser(ctx, u); err != nil {
+			t.Fatalf("UpsertUser() failed: %v", err)
+		}
+	}
+	result, err := s.ListUsers(ctx, nil, storage.ListOptions{})
+	if err != nil {
+		t.Fatalf("ListUsers() failed: %v", err)
+	}
+	if len(result.Items) != 2 {
+		t.Errorf("expected 2 users, got %d", len(result.Items))
+	}
+}
+
+// TestStore_ListUsers_Pagination verifies cursor-based pagination.
+func TestStore_ListUsers_Pagination(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	for i := 0; i < 250; i++ {
+		id := fmt.Sprintf("user-%03d", i)
+		subject := fmt.Sprintf("sub-%03d", i)
+		u := newTestUser(t, id, subject)
+		if err := s.UpsertUser(ctx, u); err != nil {
+			t.Fatalf("UpsertUser(%s) failed: %v", id, err)
+		}
+		time.Sleep(time.Millisecond)
+	}
+
+	page1, err := s.ListUsers(ctx, nil, storage.ListOptions{Limit: 100})
+	if err != nil {
+		t.Fatalf("ListUsers(page 1) failed: %v", err)
+	}
+	if len(page1.Items) != 100 {
+		t.Errorf("page 1: expected 100 users, got %d", len(page1.Items))
+	}
+	if page1.NextCursor == "" {
+		t.Error("page 1: expected non-empty NextCursor")
+	}
+	page2, err := s.ListUsers(ctx, nil, storage.ListOptions{
+		Cursor: page1.NextCursor,
+		Limit:  100,
+	})
+	if err != nil {
+		t.Fatalf("ListUsers(page 2) failed: %v", err)
+	}
+	if len(page2.Items) != 100 {
+		t.Errorf("page 2: expected 100 users, got %d", len(page2.Items))
+	}
+	if page2.NextCursor == "" {
+		t.Error("page 2: expected non-empty NextCursor")
+	}
+	page3, err := s.ListUsers(ctx, nil, storage.ListOptions{
+		Cursor: page2.NextCursor,
+		Limit:  100,
+	})
+	if err != nil {
+		t.Fatalf("ListUsers(page 3) failed: %v", err)
+	}
+	if len(page3.Items) != 50 {
+		t.Errorf("page 3: expected 50 users, got %d", len(page3.Items))
+	}
+	if page3.NextCursor != "" {
+		t.Errorf("page 3: expected empty NextCursor, got %q", page3.NextCursor)
+	}
+	seen := make(map[string]bool)
+	for _, page := range []*storage.UserListResult{page1, page2, page3} {
+		for _, u := range page.Items {
+			if seen[u.ID()] {
+				t.Errorf("duplicate user across pages: %s", u.ID())
+			}
+			seen[u.ID()] = true
+		}
+	}
+	if len(seen) != 250 {
+		t.Errorf("expected 250 unique users across pages, got %d", len(seen))
+	}
+}
+
+// TestStore_ListUsers_LimitNormalization verifies default and max limit handling.
+func TestStore_ListUsers_LimitNormalization(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	for i := 0; i < 150; i++ {
+		u := newTestUser(t, fmt.Sprintf("u%d", i), fmt.Sprintf("sub%d", i))
+		if err := s.UpsertUser(ctx, u); err != nil {
+			t.Fatalf("UpsertUser() failed: %v", err)
+		}
+	}
+
+	tests := []struct {
+		name      string
+		limit     int
+		wantLimit int
+	}{
+		{name: "zero uses default", limit: 0, wantLimit: storage.DefaultListLimit},
+		{name: "negative uses default", limit: -1, wantLimit: storage.DefaultListLimit},
+		{name: "above max uses default", limit: storage.MaxListLimit + 1, wantLimit: storage.DefaultListLimit},
+		{name: "valid limit preserved", limit: 50, wantLimit: 50},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := s.ListUsers(ctx, nil, storage.ListOptions{Limit: tt.limit})
+			if err != nil {
+				t.Fatalf("ListUsers() failed: %v", err)
+			}
+			if len(result.Items) != tt.wantLimit {
+				t.Errorf("expected exactly %d users, got %d", tt.wantLimit, len(result.Items))
+			}
+		})
+	}
+}
+
+// TestStore_ListUsers_InvalidCursor verifies rejection of malformed cursors.
+func TestStore_ListUsers_InvalidCursor(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	tests := []struct {
+		name   string
+		cursor string
+	}{
+		{name: "invalid base64", cursor: "not-base64!!!"},
+		{name: "valid base64 invalid json", cursor: "aGVsbG8gd29ybGQ="},
+		{name: "corrupted structure", cursor: "eyJpbnZhbGlkIjogdHJ1ZX0="},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := s.ListUsers(ctx, nil, storage.ListOptions{Cursor: tt.cursor, Limit: 10})
+			if err == nil {
+				t.Error("ListUsers() should reject invalid cursor")
+			}
+			if !stdErrors.Is(err, storage.ErrInvalidArgument) {
+				t.Errorf("expected ErrInvalidArgument, got %v", err)
+			}
+		})
+	}
+}
+
+// TestStore_DeleteUser verifies deletion functionality.
+func TestStore_DeleteUser(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	user := newTestUser(t, "to-delete", "subject-delete")
+	if err := s.UpsertUser(ctx, user); err != nil {
+		t.Fatalf("UpsertUser() failed: %v", err)
+	}
+	if err := s.DeleteUser(ctx, "to-delete"); err != nil {
+		t.Fatalf("DeleteUser() failed: %v", err)
+	}
+	err := s.DeleteUser(ctx, "to-delete")
+	if err == nil {
+		t.Fatal("DeleteUser() should fail for already-deleted user")
+	}
+	if !stdErrors.Is(err, storage.ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
+	}
+}
+
+// TestStore_DeleteUser_EmptyID verifies rejection of empty IDs.
+func TestStore_DeleteUser_EmptyID(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	err := s.DeleteUser(ctx, "")
+	if err == nil {
+		t.Fatal("DeleteUser(\"\") should return error")
 	}
 	if !stdErrors.Is(err, storage.ErrInvalidArgument) {
 		t.Errorf("expected ErrInvalidArgument, got %v", err)

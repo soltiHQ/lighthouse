@@ -5,8 +5,11 @@ import (
 	"github.com/soltiHQ/control-plane/internal/storage"
 )
 
-// Compile-time check that Filter implements storage.AgentFilter.
-var _ storage.AgentFilter = (*Filter)(nil)
+// Compile-time checks that filters implement their respective marker interfaces.
+var (
+	_ storage.AgentFilter = (*Filter)(nil)
+	_ storage.UserFilter  = (*UserFilter)(nil)
+)
 
 // Filter provides predicate-based filtering for in-memory agent queries.
 //
@@ -71,3 +74,76 @@ func (f *Filter) Matches(a *domain.AgentModel) bool {
 
 // IsAgentFilter implements the storage.AgentFilter marker interface.
 func (f *Filter) IsAgentFilter() {}
+
+// UserFilter provides predicate-based filtering for in-memory user queries.
+//
+// Filters are composed by chaining builder methods, each adding a predicate
+// that must be satisfied for a user to match. All predicates are ANDed together.
+type UserFilter struct {
+	predicates []func(*domain.UserModel) bool
+}
+
+// NewUserFilter creates a new empty filter that matches all users.
+func NewUserFilter() *UserFilter {
+	return &UserFilter{
+		predicates: make([]func(*domain.UserModel) bool, 0),
+	}
+}
+
+// ByEmail adds a predicate matching users with the specified email.
+func (f *UserFilter) ByEmail(email string) *UserFilter {
+	f.predicates = append(f.predicates, func(u *domain.UserModel) bool {
+		return u.Email() == email
+	})
+	return f
+}
+
+// ByDisabled adds a predicate matching users based on their disabled status.
+func (f *UserFilter) ByDisabled(disabled bool) *UserFilter {
+	f.predicates = append(f.predicates, func(u *domain.UserModel) bool {
+		return u.Disabled() == disabled
+	})
+	return f
+}
+
+// ByRole adds a predicate matching users who have the specified role.
+func (f *UserFilter) ByRole(role domain.Role) *UserFilter {
+	f.predicates = append(f.predicates, func(u *domain.UserModel) bool {
+		for _, r := range u.Roles() {
+			if r == role {
+				return true
+			}
+		}
+		return false
+	})
+	return f
+}
+
+// ByScope adds a predicate matching users who have the specified scope.
+func (f *UserFilter) ByScope(scope domain.Scope) *UserFilter {
+	f.predicates = append(f.predicates, func(u *domain.UserModel) bool {
+		for _, s := range u.Scopes() {
+			if s == scope {
+				return true
+			}
+		}
+		return false
+	})
+	return f
+}
+
+// Matches evaluate whether a user satisfies all predicates in this filter.
+//
+// Returns true if all predicates pass, false if any predicate fails.
+// Empty filters (no predicates) match all users.
+func (f *UserFilter) Matches(u *domain.UserModel) bool {
+	for _, pred := range f.predicates {
+		if !pred(u) {
+			return false
+		}
+	}
+	return true
+}
+
+// IsUserFilter implements the storage.UserFilter marker interface.
+func (f *UserFilter) IsUserFilter() {}
