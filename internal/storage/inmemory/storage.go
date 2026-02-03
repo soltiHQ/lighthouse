@@ -9,22 +9,25 @@ import (
 
 // Compile-time checks that Store implements the required interfaces.
 var (
-	_ storage.Storage    = (*Store)(nil)
-	_ storage.AgentStore = (*Store)(nil)
-	_ storage.UserStore  = (*Store)(nil)
+	_ storage.Storage         = (*Store)(nil)
+	_ storage.AgentStore      = (*Store)(nil)
+	_ storage.UserStore       = (*Store)(nil)
+	_ storage.CredentialStore = (*Store)(nil)
 )
 
 // Store provides an in-memory implementation of storage.Storage using GenericStore.
 type Store struct {
-	agents *GenericStore[*domain.AgentModel]
-	users  *GenericStore[*domain.UserModel]
+	agents      *GenericStore[*domain.AgentModel]
+	users       *GenericStore[*domain.UserModel]
+	credentials *GenericStore[*domain.CredentialModel]
 }
 
 // New creates a new in-memory store with an empty state.
 func New() *Store {
 	return &Store{
-		agents: NewGenericStore[*domain.AgentModel](),
-		users:  NewGenericStore[*domain.UserModel](),
+		agents:      NewGenericStore[*domain.AgentModel](),
+		users:       NewGenericStore[*domain.UserModel](),
+		credentials: NewGenericStore[*domain.CredentialModel](),
 	}
 }
 
@@ -162,4 +165,69 @@ func (s *Store) ListUsers(ctx context.Context, filter storage.UserFilter, opts s
 // Returns storage.ErrNotFound if the user doesn't exist, storage.ErrInvalidArgument for empty IDs.
 func (s *Store) DeleteUser(ctx context.Context, id string) error {
 	return s.users.Delete(ctx, id)
+}
+
+// UpsertCredential inserts or fully replaces a credential.
+//
+// Delegates to GenericStore, which handles cloning and validation.
+// Returns storage.ErrInvalidArgument if the credential is nil or has an empty ID.
+func (s *Store) UpsertCredential(ctx context.Context, c *domain.CredentialModel) error {
+	if c == nil {
+		return storage.ErrInvalidArgument
+	}
+	return s.credentials.Upsert(ctx, c)
+}
+
+// GetCredential retrieves a credential by ID.
+//
+// Returns a deep clone to prevent external mutations affecting the stored state.
+// Returns storage.ErrNotFound if no credential exists, storage.ErrInvalidArgument for empty IDs.
+func (s *Store) GetCredential(ctx context.Context, id string) (*domain.CredentialModel, error) {
+	return s.credentials.Get(ctx, id)
+}
+
+// GetCredentialByUserAndType retrieves a specific credential type for a user.
+// Returns storage.ErrNotFound if no matching credential exists, storage.ErrInvalidArgument for empty userID.
+func (s *Store) GetCredentialByUserAndType(ctx context.Context, userID string, credType domain.CredentialType) (*domain.CredentialModel, error) {
+	if userID == "" {
+		return nil, storage.ErrInvalidArgument
+	}
+
+	result, err := s.credentials.List(ctx, func(c *domain.CredentialModel) bool {
+		return c.UserID() == userID && c.Type() == credType
+	}, storage.ListOptions{Limit: 1})
+	if err != nil {
+		return nil, err
+	}
+	if len(result.Items) == 0 {
+		return nil, storage.ErrNotFound
+	}
+	return result.Items[0], nil
+}
+
+// ListCredentialsByUser retrieves all credentials for a specific user.
+//
+// This method performs a linear scan and is O(n) - acceptable for in-memory implementation
+// with small datasets. Production implementations should use indexed lookups.
+//
+// Returns storage.ErrInvalidArgument for empty userID.
+func (s *Store) ListCredentialsByUser(ctx context.Context, userID string) ([]*domain.CredentialModel, error) {
+	if userID == "" {
+		return nil, storage.ErrInvalidArgument
+	}
+
+	result, err := s.credentials.List(ctx, func(c *domain.CredentialModel) bool {
+		return c.UserID() == userID
+	}, storage.ListOptions{Limit: storage.MaxListLimit})
+	if err != nil {
+		return nil, err
+	}
+	return result.Items, nil
+}
+
+// DeleteCredential removes a credential by ID.
+//
+// Returns storage.ErrNotFound if the credential doesn't exist, storage.ErrInvalidArgument for empty IDs.
+func (s *Store) DeleteCredential(ctx context.Context, id string) error {
+	return s.credentials.Delete(ctx, id)
 }

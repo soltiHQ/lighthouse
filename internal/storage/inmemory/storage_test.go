@@ -12,7 +12,6 @@ import (
 	"github.com/soltiHQ/control-plane/internal/storage"
 )
 
-// newTestAgent creates an agent model for testing with optional labels.
 func newTestAgent(t *testing.T, id, platform, osName, arch string, labels map[string]string) *domain.AgentModel {
 	t.Helper()
 
@@ -37,7 +36,6 @@ func newTestAgent(t *testing.T, id, platform, osName, arch string, labels map[st
 	return a
 }
 
-// newTestUser creates a user model for testing with minimal fields.
 func newTestUser(t *testing.T, id, subject string) *domain.UserModel {
 	t.Helper()
 
@@ -46,6 +44,19 @@ func newTestUser(t *testing.T, id, subject string) *domain.UserModel {
 		t.Fatalf("NewUserModel(%q, %q) failed: %v", id, subject, err)
 	}
 	return u
+}
+
+func newTestCredential(t *testing.T, id, userID string, ct domain.CredentialType, data map[string]string) *domain.CredentialModel {
+	t.Helper()
+
+	c, err := domain.NewCredentialModel(id, userID, ct)
+	if err != nil {
+		t.Fatalf("NewCredentialModel(%q, %q) failed: %v", id, userID, err)
+	}
+	for k, v := range data {
+		c.SetData(k, v)
+	}
+	return c
 }
 
 // TestStore_UpsertAndGetAgent verifies basic create and retrieve operations.
@@ -734,5 +745,247 @@ func TestStore_DeleteUser_EmptyID(t *testing.T) {
 	}
 	if !stdErrors.Is(err, storage.ErrInvalidArgument) {
 		t.Errorf("expected ErrInvalidArgument, got %v", err)
+	}
+}
+
+// TestStore_UpsertAndGetCredential tests the upsert and retrieval functionality of credentials in the store.
+func TestStore_UpsertAndGetCredential(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	original := newTestCredential(t, "cred-1", "user-1", domain.CredentialTypePassword, map[string]string{
+		"hash": "h1",
+		"salt": "s1",
+	})
+	if err := s.UpsertCredential(ctx, original); err != nil {
+		t.Fatalf("UpsertCredential() failed: %v", err)
+	}
+
+	retrieved, err := s.GetCredential(ctx, "cred-1")
+	if err != nil {
+		t.Fatalf("GetCredential() failed: %v", err)
+	}
+	if retrieved == original {
+		t.Error("GetCredential() should return a clone, not the original instance")
+	}
+	if retrieved.ID() != original.ID() {
+		t.Errorf("ID mismatch: got %q, want %q", retrieved.ID(), original.ID())
+	}
+	if retrieved.UserID() != original.UserID() {
+		t.Errorf("UserID mismatch: got %q, want %q", retrieved.UserID(), original.UserID())
+	}
+	if retrieved.Type() != original.Type() {
+		t.Errorf("Type mismatch: got %v, want %v", retrieved.Type(), original.Type())
+	}
+	if v, ok := retrieved.GetData("hash"); !ok || v != "h1" {
+		t.Fatalf("expected data hash=h1, got %q (ok=%v)", v, ok)
+	}
+}
+
+// TestStore_UpsertCredential_Nil ensures UpsertCredential does not accept a nil argument and returns ErrInvalidArgument.
+func TestStore_UpsertCredential_Nil(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	err := s.UpsertCredential(ctx, nil)
+	if err == nil {
+		t.Fatal("UpsertCredential(nil) should return error")
+	}
+	if !stdErrors.Is(err, storage.ErrInvalidArgument) {
+		t.Fatalf("expected ErrInvalidArgument, got %v", err)
+	}
+}
+
+// TestStore_GetCredential_NotFound tests that GetCredential returns an error when the requested credential does not exist.
+func TestStore_GetCredential_NotFound(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	_, err := s.GetCredential(ctx, "nope")
+	if err == nil {
+		t.Fatal("GetCredential() should return error for missing credential")
+	}
+	if !stdErrors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+// TestStore_GetCredential_EmptyID validates that GetCredential returns an error when called with an empty ID.
+func TestStore_GetCredential_EmptyID(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	_, err := s.GetCredential(ctx, "")
+	if err == nil {
+		t.Fatal(`GetCredential("") should return error`)
+	}
+	if !stdErrors.Is(err, storage.ErrInvalidArgument) {
+		t.Fatalf("expected ErrInvalidArgument, got %v", err)
+	}
+}
+
+// TestStore_UpsertCredential_IsolatesMutations verifies that UpsertCredential creates an isolated copy, ignoring external mutations.
+func TestStore_UpsertCredential_IsolatesMutations(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	cred := newTestCredential(t, "cred-1", "user-1", domain.CredentialTypePassword, map[string]string{
+		"hash": "h1",
+	})
+	if err := s.UpsertCredential(ctx, cred); err != nil {
+		t.Fatalf("UpsertCredential() failed: %v", err)
+	}
+
+	cred.SetData("hash", "mutated")
+	got, err := s.GetCredential(ctx, "cred-1")
+	if err != nil {
+		t.Fatalf("GetCredential() failed: %v", err)
+	}
+	v, ok := got.GetData("hash")
+	if !ok || v != "h1" {
+		t.Fatalf("expected stored hash=h1, got %q (ok=%v)", v, ok)
+	}
+}
+
+// TestStore_GetCredentialByUserAndType verifies retrieval of a credential by user ID and credential type from the store.
+func TestStore_GetCredentialByUserAndType(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	c1 := newTestCredential(t, "c1", "user-1", domain.CredentialTypePassword, map[string]string{"hash": "h"})
+	c2 := newTestCredential(t, "c2", "user-1", domain.CredentialTypeOIDC, map[string]string{"sub": "x"})
+	c3 := newTestCredential(t, "c3", "user-2", domain.CredentialTypePassword, map[string]string{"hash": "h2"})
+
+	for _, c := range []*domain.CredentialModel{c1, c2, c3} {
+		if err := s.UpsertCredential(ctx, c); err != nil {
+			t.Fatalf("UpsertCredential() failed: %v", err)
+		}
+	}
+
+	got, err := s.GetCredentialByUserAndType(ctx, "user-1", domain.CredentialTypeOIDC)
+	if err != nil {
+		t.Fatalf("GetCredentialByUserAndType() failed: %v", err)
+	}
+	if got.ID() != "c2" {
+		t.Fatalf("expected c2, got %s", got.ID())
+	}
+	if got.UserID() != "user-1" {
+		t.Fatalf("expected user-1, got %s", got.UserID())
+	}
+	if got.Type() != domain.CredentialTypeOIDC {
+		t.Fatalf("expected OIDC, got %v", got.Type())
+	}
+}
+
+// TestStore_GetCredentialByUserAndType_EmptyUserID verifies that GetCredentialByUserAndType rejects an empty userID with an error.
+func TestStore_GetCredentialByUserAndType_EmptyUserID(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	_, err := s.GetCredentialByUserAndType(ctx, "", domain.CredentialTypePassword)
+	if err == nil {
+		t.Fatal("GetCredentialByUserAndType() should reject empty userID")
+	}
+	if !stdErrors.Is(err, storage.ErrInvalidArgument) {
+		t.Fatalf("expected ErrInvalidArgument, got %v", err)
+	}
+}
+
+// TestStore_GetCredentialByUserAndType_NotFound verifies behavior when fetching a credential by user and type that does not exist.
+func TestStore_GetCredentialByUserAndType_NotFound(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	c := newTestCredential(t, "c1", "user-1", domain.CredentialTypePassword, map[string]string{"hash": "h"})
+	if err := s.UpsertCredential(ctx, c); err != nil {
+		t.Fatalf("UpsertCredential() failed: %v", err)
+	}
+
+	_, err := s.GetCredentialByUserAndType(ctx, "user-1", domain.CredentialTypeOIDC)
+	if err == nil {
+		t.Fatal("expected error for missing credential type")
+	}
+	if !stdErrors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+// TestStore_ListCredentialsByUser verifies that the ListCredentialsByUser function retrieves all credentials for a given user ID.
+func TestStore_ListCredentialsByUser(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	c1 := newTestCredential(t, "c1", "user-1", domain.CredentialTypePassword, map[string]string{"hash": "h"})
+	c2 := newTestCredential(t, "c2", "user-1", domain.CredentialTypeOIDC, map[string]string{"sub": "x"})
+	c3 := newTestCredential(t, "c3", "user-2", domain.CredentialTypePassword, map[string]string{"hash": "h2"})
+
+	for _, c := range []*domain.CredentialModel{c1, c2, c3} {
+		if err := s.UpsertCredential(ctx, c); err != nil {
+			t.Fatalf("UpsertCredential() failed: %v", err)
+		}
+	}
+
+	items, err := s.ListCredentialsByUser(ctx, "user-1")
+	if err != nil {
+		t.Fatalf("ListCredentialsByUser() failed: %v", err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("expected 2 credentials, got %d", len(items))
+	}
+	for _, it := range items {
+		if it.UserID() != "user-1" {
+			t.Fatalf("unexpected credential userID: %s", it.UserID())
+		}
+	}
+}
+
+// TestStore_ListCredentialsByUser_EmptyUserID tests that ListCredentialsByUser returns an error when given an empty userID.
+func TestStore_ListCredentialsByUser_EmptyUserID(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	_, err := s.ListCredentialsByUser(ctx, "")
+	if err == nil {
+		t.Fatal("ListCredentialsByUser() should reject empty userID")
+	}
+	if !stdErrors.Is(err, storage.ErrInvalidArgument) {
+		t.Fatalf("expected ErrInvalidArgument, got %v", err)
+	}
+}
+
+// TestStore_DeleteCredential verifies the deletion of a credential, including the handling of non-existent credentials.
+func TestStore_DeleteCredential(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	c := newTestCredential(t, "cred-del", "user-1", domain.CredentialTypePassword, map[string]string{"hash": "h"})
+	if err := s.UpsertCredential(ctx, c); err != nil {
+		t.Fatalf("UpsertCredential() failed: %v", err)
+	}
+
+	if err := s.DeleteCredential(ctx, "cred-del"); err != nil {
+		t.Fatalf("DeleteCredential() failed: %v", err)
+	}
+
+	err := s.DeleteCredential(ctx, "cred-del")
+	if err == nil {
+		t.Fatal("DeleteCredential() should fail for already-deleted credential")
+	}
+	if !stdErrors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+// TestStore_DeleteCredential_EmptyID tests the behavior of DeleteCredential when called with an empty ID.
+func TestStore_DeleteCredential_EmptyID(t *testing.T) {
+	ctx := context.Background()
+	s := New()
+
+	err := s.DeleteCredential(ctx, "")
+	if err == nil {
+		t.Fatal(`DeleteCredential("") should return error`)
+	}
+	if !stdErrors.Is(err, storage.ErrInvalidArgument) {
+		t.Fatalf("expected ErrInvalidArgument, got %v", err)
 	}
 }

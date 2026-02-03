@@ -13,6 +13,9 @@ type AgentListResult = ListResult[*domain.AgentModel]
 // UserListResult contains a page of user results with pagination support.
 type UserListResult = ListResult[*domain.UserModel]
 
+// CredentialListResult contains a page of credential results with pagination support.
+type CredentialListResult = ListResult[*domain.CredentialModel]
+
 // AgentStore defines persistence operations for agent domain objects.
 type AgentStore interface {
 	// UpsertAgent creates a new agent or replaces an existing one.
@@ -126,8 +129,54 @@ type UserStore interface {
 	DeleteUser(ctx context.Context, id string) error
 }
 
+// CredentialStore defines persistence operations for credential domain objects.
+type CredentialStore interface {
+	// UpsertCredential creates a new credential or replaces an existing one.
+	//
+	// If a credential with the same ID exists, it is fully replaced.
+	// Otherwise, a new credential record is created.
+	//
+	// Returns:
+	//   - ErrInvalidArgument if the credential is nil or violates storage-level invariants.
+	//   - ErrInternal for unexpected storage failures.
+	UpsertCredential(ctx context.Context, c *domain.CredentialModel) error
+
+	// GetCredential retrieves a credential by its unique identifier.
+	//
+	// Returns:
+	//   - ErrNotFound if no credential with the given ID exists.
+	//   - ErrInvalidArgument if the ID format is invalid.
+	//   - ErrInternal for unexpected storage failures.
+	GetCredential(ctx context.Context, id string) (*domain.CredentialModel, error)
+
+	// GetCredentialByUserAndType retrieves a specific credential type for a user.
+	//
+	// Returns:
+	//   - ErrNotFound if no matching credential exists.
+	//   - ErrInvalidArgument if the userID is empty.
+	//   - ErrInternal for unexpected storage failures.
+	GetCredentialByUserAndType(ctx context.Context, userID string, credType domain.CredentialType) (*domain.CredentialModel, error)
+
+	// ListCredentialsByUser retrieves all credentials for a specific user.
+	// Returns all credential types (password, OIDC, API keys) associated with the user.
+	//
+	// Returns:
+	//   - ErrInvalidArgument if the userID is empty.
+	//   - ErrInternal for unexpected storage failures.
+	ListCredentialsByUser(ctx context.Context, userID string) ([]*domain.CredentialModel, error)
+
+	// DeleteCredential removes a credential by its unique identifier.
+	//
+	// Returns:
+	//   - ErrNotFound if no credential with the given ID exists.
+	//   - ErrInvalidArgument if the ID format is invalid.
+	//   - ErrInternal for unexpected storage failures.
+	DeleteCredential(ctx context.Context, id string) error
+}
+
 // Storage aggregates all domain-specific storage capabilities.
 type Storage interface {
 	AgentStore
 	UserStore
+	CredentialStore
 }
