@@ -26,11 +26,11 @@ func HttpChain(base http.Handler, log zerolog.Logger, cfg HttpChainConfig) http.
 	if cfg.Logging {
 		h = logger.HTTP(log)(h)
 	}
-	if cfg.Recovery {
-		h = recovery.HTTP(log)(h)
-	}
 	if cfg.RequestID {
 		h = request.RequestID()(h)
+	}
+	if cfg.Recovery {
+		h = recovery.HTTP(log)(h)
 	}
 	return h
 }
@@ -39,19 +39,18 @@ func HttpChain(base http.Handler, log zerolog.Logger, cfg HttpChainConfig) http.
 func GrpcUnaryOptions(log zerolog.Logger, cfg GrpcChainConfig) []grpc.ServerOption {
 	var interceptors []grpc.UnaryServerInterceptor
 
-	if cfg.RequestID {
-		interceptors = append(interceptors, request.UnaryRequestID())
-	}
-	if cfg.Recovery {
-		interceptors = append(interceptors, recovery.Unary(log))
-	}
 	if cfg.Auth != nil {
 		interceptors = append(interceptors, auth.Unary(cfg.Auth.Verifier, log))
 	}
 	if cfg.Logging {
 		interceptors = append(interceptors, logger.Unary(log))
 	}
-
+	if cfg.RequestID {
+		interceptors = append(interceptors, request.UnaryRequestID())
+	}
+	if cfg.Recovery {
+		interceptors = append(interceptors, recovery.Unary(log))
+	}
 	if len(interceptors) == 0 {
 		return nil
 	}
