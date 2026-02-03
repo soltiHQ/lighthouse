@@ -19,31 +19,44 @@ func validateURL(field, value string) error {
 		return err
 	}
 
-	toParse := value
 	if !strings.Contains(value, "://") {
-		toParse = "http://" + value
+		return fmt.Errorf("%w (%s must include scheme, e.g., 'http://example.com')", ErrInvalidURL, field)
 	}
 
-	parsed, err := url.Parse(toParse)
+	parsed, err := url.Parse(value)
 	if err != nil {
-		return fmt.Errorf("%w (%s invalid: %q)", ErrInvalidURL, field, value)
+		return fmt.Errorf("%w (%s invalid format: %q)", ErrInvalidURL, field, value)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return fmt.Errorf("%w (%s unsupported scheme %q, only http/https allowed)", ErrInvalidURL, field, parsed.Scheme)
 	}
 	if parsed.Host == "" {
 		return fmt.Errorf("%w (%s missing host)", ErrInvalidURL, field)
 	}
-	if port := parsed.Port(); port != "" {
-		if _, err = strconv.Atoi(port); err != nil {
-			return fmt.Errorf("%w (%s invalid port %q)", ErrInvalidURL, field, port)
+
+	hostname := parsed.Hostname()
+	if hostname == "" {
+		return fmt.Errorf("%w (%s missing hostname)", ErrInvalidURL, field)
+	}
+	if portStr := parsed.Port(); portStr != "" {
+		port, err := strconv.Atoi(portStr)
+		if err != nil {
+			return fmt.Errorf("%w (%s invalid port %q)", ErrInvalidURL, field, portStr)
+		}
+		if err = validatePortForScheme(field, parsed.Scheme, port); err != nil {
+			return err
 		}
 	}
 
-	switch parsed.Scheme {
-	case "http", "https":
-		return nil
-	default:
-		if strings.Contains(value, "://") {
-			return fmt.Errorf("%w (%s unsupported scheme %q)", ErrInvalidURL, field, parsed.Scheme)
-		}
+	if parsed.User != nil {
+		return fmt.Errorf("%w (%s contains credentials in URL, use headers instead)", ErrInvalidURL, field)
+	}
+	return nil
+}
+
+func validatePortForScheme(field, scheme string, port int) error {
+	if port < 1 || port > 65535 {
+		return fmt.Errorf("%w (%s port %d out of valid range 1-65535)", ErrInvalidURL, field, port)
 	}
 	return nil
 }

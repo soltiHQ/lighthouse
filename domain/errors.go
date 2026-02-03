@@ -8,7 +8,7 @@ var (
 	// ErrFieldEmpty indicates that a required field is empty.
 	ErrFieldEmpty = errors.New("field cannot be empty")
 	// ErrInvalidURL indicates that the url format is invalid.
-	ErrInvalidURL = errors.New("endpoint must be 'scheme://host' or 'host:port'")
+	ErrInvalidURL = errors.New("invalid URL format")
 	// ErrEmptyID indicates that entity ID is empty.
 	ErrEmptyID = errors.New("id cannot be empty")
 	// ErrInvalidSubject indicates that a subject is invalid or empty.
