@@ -30,26 +30,36 @@ func NewApiServer(cfg Config, logger zerolog.Logger, storage storage.Storage) *A
 		storage: storage,
 		logger:  logger.With().Str("server", "api").Logger(),
 	}
-	if cfg.addrHTTP != "" {
-		var (
-			handler = handlers.NewHttp(logger, storage)
-			mux     = http.NewServeMux()
-		)
-		mux.HandleFunc("GET /v1/agents", handler.AgentList)
+	if cfg.addrHTTP == "" {
+		return s
+	}
 
-		s.http = &http.Server{
-			ReadHeaderTimeout: cfg.configHTTP.Timeouts.ReadHeader,
-			ReadTimeout:       cfg.configHTTP.Timeouts.Read,
-			WriteTimeout:      cfg.configHTTP.Timeouts.Write,
-			IdleTimeout:       cfg.configHTTP.Timeouts.Idle,
-			Addr:              cfg.addrHTTP,
+	var (
+		handler = handlers.NewHttp(logger, storage, cfg.authn)
+		apiMux  = http.NewServeMux()
+	)
+	apiMux.HandleFunc("GET /v1/agents", handler.AgentList)
+	authMux := http.NewServeMux()
 
-			Handler: middleware.HttpChain(
-				mux,
-				logger,
-				cfg.configHTTP.Middleware,
-			),
-		}
+	if cfg.configHTTP.Middleware.Auth != nil && cfg.configHTTP.Middleware.Auth.Enabled {
+		authMux.HandleFunc("POST /v1/auth/token", handler.Token)
+	}
+
+	var (
+		root      = http.NewServeMux()
+		publicCfg = cfg.configHTTP.Middleware
+	)
+	publicCfg.Auth = nil
+	root.Handle("/v1/auth/", middleware.HttpChain(authMux, logger, publicCfg))
+	root.Handle("/", middleware.HttpChain(apiMux, logger, cfg.configHTTP.Middleware))
+
+	s.http = &http.Server{
+		ReadHeaderTimeout: cfg.configHTTP.Timeouts.ReadHeader,
+		ReadTimeout:       cfg.configHTTP.Timeouts.Read,
+		WriteTimeout:      cfg.configHTTP.Timeouts.Write,
+		IdleTimeout:       cfg.configHTTP.Timeouts.Idle,
+		Addr:              cfg.addrHTTP,
+		Handler:           root,
 	}
 	return s
 }

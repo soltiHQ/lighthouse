@@ -57,9 +57,6 @@ func (a *PasswordAuthenticator) Authenticate(ctx context.Context, req *Request) 
 		return "", nil, err
 	}
 	if err = credentials.VerifyPassword(cred, req.Password); err != nil {
-		if errors.Is(err, credentials.ErrPasswordMismatch) {
-			return "", nil, ErrInvalidCredentials
-		}
 		return "", nil, ErrInvalidCredentials
 	}
 
@@ -100,6 +97,8 @@ func (a *PasswordAuthenticator) Authenticate(ctx context.Context, req *Request) 
 
 func newTokenID() string {
 	var b [16]byte
-	_, _ = rand.Read(b[:])
+	if _, err := rand.Read(b[:]); err != nil {
+		panic(err)
+	}
 	return hex.EncodeToString(b[:])
 }

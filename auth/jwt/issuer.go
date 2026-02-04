@@ -2,7 +2,6 @@ package jwt
 
 import (
 	"context"
-	"time"
 
 	"github.com/soltiHQ/control-plane/auth"
 
@@ -11,30 +10,33 @@ import (
 
 // Issuer implements auth.Issuer using HMAC-signed JWT tokens (HS256).
 type Issuer struct {
-	cfg auth.JWTConfig
+	secret []byte
 }
 
 // NewIssuer creates a new JWT issuer with the provided configuration.
-func NewIssuer(cfg auth.JWTConfig) *Issuer {
-	return &Issuer{cfg: cfg}
+func NewIssuer(secret []byte) *Issuer {
+	return &Issuer{secret: secret}
 }
 
 // Issue signs and returns a JWT token for the given identity.
 func (i *Issuer) Issue(_ context.Context, id *auth.Identity) (string, error) {
-	now := time.Now()
+	if id == nil {
+		return "", auth.ErrInvalidToken
+	}
 
 	claims := jwtlib.MapClaims{
-		"iss":   i.cfg.Issuer,
-		"aud":   []string{i.cfg.Audience},
-		"sub":   id.Subject,
-		"iat":   now.Unix(),
-		"nbf":   now.Unix(),
-		"exp":   now.Add(i.cfg.TokenTTL).Unix(),
-		"jti":   id.TokenID,
+		"iss": id.Issuer,
+		"aud": id.Audience,
+		"sub": id.Subject,
+		"iat": id.IssuedAt.Unix(),
+		"nbf": id.NotBefore.Unix(),
+		"exp": id.ExpiresAt.Unix(),
+		"jti": id.TokenID,
+
 		"uid":   id.UserID,
 		"perms": id.Permissions,
 	}
 
 	t := jwtlib.NewWithClaims(jwtlib.SigningMethodHS256, claims)
-	return t.SignedString(i.cfg.Secret)
+	return t.SignedString(i.secret)
 }

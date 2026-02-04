@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/soltiHQ/control-plane/auth/authenticator"
 	"github.com/soltiHQ/control-plane/internal/transport/middleware"
 )
 
@@ -57,4 +58,9 @@ func WithHTTPMiddlewareConfig(config middleware.HttpChainConfig) Option {
 	return func(c *Config) {
 		c.configHTTP.Middleware = config
 	}
+}
+
+// WithAuthenticator sets the authenticator to use for the API server.
+func WithAuthenticator(a authenticator.Authenticator) Option {
+	return func(c *Config) { c.authn = a }
 }

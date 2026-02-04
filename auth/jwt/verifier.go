@@ -12,12 +12,18 @@ import (
 
 // Verifier implements auth.Verifier for HMAC-signed JWT tokens (HS256).
 type Verifier struct {
-	cfg auth.JWTConfig
+	issuer   string
+	audience string
+	secret   []byte
 }
 
 // NewVerifier creates a new JWT verifier.
-func NewVerifier(cfg auth.JWTConfig) *Verifier {
-	return &Verifier{cfg: cfg}
+func NewVerifier(issuer, audience string, secret []byte) *Verifier {
+	return &Verifier{
+		issuer:   issuer,
+		audience: audience,
+		secret:   secret,
+	}
 }
 
 // Verify parses and validates a raw JWT token string.
@@ -27,38 +33,45 @@ func (v *Verifier) Verify(_ context.Context, rawToken string) (*auth.Identity, e
 	}
 
 	tok, err := jwtlib.Parse(rawToken, func(t *jwtlib.Token) (any, error) {
-		if t.Method != jwtlib.SigningMethodHS256 {
+		if t.Method == nil || t.Method.Alg() != jwtlib.SigningMethodHS256.Alg() {
 			return nil, auth.ErrInvalidToken
 		}
-		return v.cfg.Secret, nil
+		return v.secret, nil
 	},
-		jwtlib.WithAudience(v.cfg.Audience),
-		jwtlib.WithIssuer(v.cfg.Issuer),
+		jwtlib.WithAudience(v.audience),
+		jwtlib.WithIssuer(v.issuer),
+		jwtlib.WithValidMethods([]string{jwtlib.SigningMethodHS256.Alg()}),
 	)
 	if err != nil {
-		if errors.Is(err, jwtlib.ErrTokenExpired) {
+		switch {
+		case errors.Is(err, jwtlib.ErrTokenExpired),
+			errors.Is(err, jwtlib.ErrTokenNotValidYet):
 			return nil, auth.ErrExpiredToken
+		default:
+			return nil, auth.ErrInvalidToken
 		}
+	}
+	if tok == nil || !tok.Valid {
 		return nil, auth.ErrInvalidToken
 	}
-	if !tok.Valid {
-		return nil, auth.ErrInvalidToken
-	}
+
 	mc, ok := tok.Claims.(jwtlib.MapClaims)
 	if !ok {
 		return nil, auth.ErrInvalidToken
 	}
 
 	id := &auth.Identity{
-		RawToken: rawToken,
-		Issuer:   v.cfg.Issuer,
+		RawToken:  rawToken,
+		Issuer:    v.issuer,
+		Audience:  []string{v.audience},
+		Subject:   stringFromClaim(mc["sub"]),
+		UserID:    stringFromClaim(mc["uid"]),
+		TokenID:   stringFromClaim(mc["jti"]),
+		IssuedAt:  time.Unix(int64FromClaim(mc["iat"]), 0),
+		NotBefore: time.Unix(int64FromClaim(mc["nbf"]), 0),
+		ExpiresAt: time.Unix(int64FromClaim(mc["exp"]), 0),
 	}
-	if sub, _ := mc["sub"].(string); sub != "" {
-		id.Subject = sub
-	}
-	if uid, _ := mc["uid"].(string); uid != "" {
-		id.UserID = uid
-	}
+
 	if perms, ok := mc["perms"].([]any); ok {
 		id.Permissions = make([]string, 0, len(perms))
 		for _, p := range perms {
@@ -67,11 +80,12 @@ func (v *Verifier) Verify(_ context.Context, rawToken string) (*auth.Identity, e
 			}
 		}
 	}
-
-	id.IssuedAt = time.Unix(int64FromClaim(mc["iat"]), 0)
-	id.NotBefore = time.Unix(int64FromClaim(mc["nbf"]), 0)
-	id.ExpiresAt = time.Unix(int64FromClaim(mc["exp"]), 0)
 	return id, nil
+}
+
+func stringFromClaim(v any) string {
+	s, _ := v.(string)
+	return s
 }
 
 func int64FromClaim(v any) int64 {

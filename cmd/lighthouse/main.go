@@ -10,10 +10,14 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/soltiHQ/control-plane/auth"
+	"github.com/soltiHQ/control-plane/auth/authenticator"
+	authjwt "github.com/soltiHQ/control-plane/auth/jwt"
 	"github.com/soltiHQ/control-plane/internal/bootstrap"
 	"github.com/soltiHQ/control-plane/internal/storage/inmemory"
 	"github.com/soltiHQ/control-plane/internal/transport/apiserver"
 	"github.com/soltiHQ/control-plane/internal/transport/edgeserver"
+	"github.com/soltiHQ/control-plane/internal/transport/middleware"
 	"github.com/soltiHQ/control-plane/internal/transport/webserver"
 )
 
@@ -35,6 +39,18 @@ func main() {
 		return
 	}
 
+	// ---- TEST JWT CONFIG (hardcoded) ----
+	jwtCfg := auth.JWTConfig{
+		Issuer:   "lighthouse",
+		Audience: "lighthouse-api",
+		Secret:   []byte("dev-secret-change-me-32bytes-min"), // >= 32 bytes is fine
+		TokenTTL: 15 * time.Minute,
+	}
+
+	jwtIssuer := authjwt.NewIssuer(jwtCfg.Secret)
+	jwtVerifier := authjwt.NewVerifier(jwtCfg.Issuer, jwtCfg.Audience, jwtCfg.Secret)
+	authn := authenticator.NewPasswordAuthenticator(store, jwtIssuer, jwtCfg)
+
 	// compose servers
 	edge := edgeserver.NewEdgeServer(
 		edgeserver.NewConfig(
@@ -50,6 +66,15 @@ func main() {
 		apiserver.NewConfig(
 			apiserver.WithHTTPAddr(":8082"),
 			apiserver.WithLogLevel(zerolog.DebugLevel),
+			apiserver.WithAuthenticator(authn),
+			apiserver.WithHTTPMiddlewareConfig(func() middleware.HttpChainConfig {
+				h := middleware.DefaultHttpChainConfig()
+				h.Auth = &middleware.AuthConfig{
+					Enabled:  true,
+					Verifier: jwtVerifier,
+				}
+				return h
+			}()),
 		),
 		logger,
 		store,

@@ -1,13 +1,10 @@
 package jwt
 
+import jwtlib "github.com/golang-jwt/jwt/v5"
+
+// Claims is a typed set of JWT claims used by Control Plane.
 type Claims struct {
-	Issuer    string   `json:"iss,omitempty"`
-	Audience  []string `json:"aud,omitempty"`
-	Subject   string   `json:"sub,omitempty"`
-	Expiry    int64    `json:"exp,omitempty"`
-	NotBefore int64    `json:"nbf,omitempty"`
-	IssuedAt  int64    `json:"iat,omitempty"`
-	TokenID   string   `json:"jti,omitempty"`
+	jwtlib.RegisteredClaims
 
 	UserID      string   `json:"uid,omitempty"`
 	Permissions []string `json:"perms,omitempty"`

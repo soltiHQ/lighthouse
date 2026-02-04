@@ -1,6 +1,7 @@
 package apiserver
 
 import (
+	"github.com/soltiHQ/control-plane/auth/authenticator"
 	"github.com/soltiHQ/control-plane/internal/transport/config"
 
 	"github.com/rs/zerolog"
@@ -13,6 +14,7 @@ type Config struct {
 	addrHTTP string
 
 	logLevel zerolog.Level
+	authn    authenticator.Authenticator
 }
 
 // NewConfig creates a new configuration instance.

@@ -123,14 +123,19 @@ func (s *Store) GetUserBySubject(ctx context.Context, subject string) (*domain.U
 
 	result, err := s.users.List(ctx, func(u *domain.UserModel) bool {
 		return u.Subject() == subject
-	}, storage.ListOptions{Limit: 1})
+	}, storage.ListOptions{Limit: 2})
 	if err != nil {
 		return nil, err
 	}
-	if len(result.Items) == 0 {
+
+	switch len(result.Items) {
+	case 0:
 		return nil, storage.ErrNotFound
+	case 1:
+		return result.Items[0], nil
+	default:
+		return nil, storage.ErrConflict
 	}
-	return result.Items[0], nil
 }
 
 // ListUsers retrieves users with filtering and cursor-based pagination.
@@ -198,14 +203,19 @@ func (s *Store) GetCredentialByUserAndType(ctx context.Context, userID string, c
 
 	result, err := s.credentials.List(ctx, func(c *domain.CredentialModel) bool {
 		return c.UserID() == userID && c.Type() == credType
-	}, storage.ListOptions{Limit: 1})
+	}, storage.ListOptions{Limit: 2})
 	if err != nil {
 		return nil, err
 	}
-	if len(result.Items) == 0 {
+
+	switch len(result.Items) {
+	case 0:
 		return nil, storage.ErrNotFound
+	case 1:
+		return result.Items[0], nil
+	default:
+		return nil, storage.ErrConflict
 	}
-	return result.Items[0], nil
 }
 
 // ListCredentialsByUser retrieves all credentials for a specific user.
@@ -303,14 +313,19 @@ func (s *Store) GetRoleByName(ctx context.Context, name string) (*domain.RoleMod
 
 	result, err := s.roles.List(ctx, func(r *domain.RoleModel) bool {
 		return r.Name() == name
-	}, storage.ListOptions{Limit: 1})
+	}, storage.ListOptions{Limit: 2})
 	if err != nil {
 		return nil, err
 	}
-	if len(result.Items) == 0 {
+
+	switch len(result.Items) {
+	case 0:
 		return nil, storage.ErrNotFound
+	case 1:
+		return result.Items[0], nil
+	default:
+		return nil, storage.ErrConflict
 	}
-	return result.Items[0], nil
 }
 
 // ListRoles retrieves roles with filtering and cursor-based pagination.

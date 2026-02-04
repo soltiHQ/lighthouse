@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/soltiHQ/control-plane/auth/authenticator"
 	"github.com/soltiHQ/control-plane/internal/backend"
 	"github.com/soltiHQ/control-plane/internal/logctx"
 	"github.com/soltiHQ/control-plane/internal/storage"
@@ -15,15 +16,18 @@ import (
 type Http struct {
 	logger  zerolog.Logger
 	storage storage.Storage
+
+	authn authenticator.Authenticator
 }
 
 // NewHttp creates a new HTTP api handler.
-func NewHttp(logger zerolog.Logger, storage storage.Storage) *Http {
+func NewHttp(logger zerolog.Logger, storage storage.Storage, authn authenticator.Authenticator) *Http {
 	return &Http{
 		logger: logger.With().
 			Str("type", "http").
 			Logger(),
 		storage: storage,
+		authn:   authn,
 	}
 }
 
