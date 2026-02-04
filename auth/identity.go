@@ -28,7 +28,7 @@ func (id *Identity) HasPermission(p string) bool {
 		return false
 	}
 	for _, x := range id.Permissions {
-		if x == p {
+		if x == "*" || x == p {
 			return true
 		}
 	}

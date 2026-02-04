@@ -17,9 +17,15 @@ import (
 func HttpChain(base http.Handler, log zerolog.Logger, cfg HttpChainConfig) http.Handler {
 	h := base
 
-	if cfg.Auth != nil {
+	if cfg.Auth == nil || !cfg.Auth.Enabled {
+		h = auth.MockHTTPIdentity()(h)
+	} else {
+		if cfg.Auth.Verifier == nil {
+			panic("middleware: auth enabled but verifier is nil")
+		}
 		h = auth.HTTP(cfg.Auth.Verifier, log)(h)
 	}
+
 	if cfg.CORS != nil {
 		h = cors.CORS(*cfg.CORS)(h)
 	}
@@ -39,9 +45,15 @@ func HttpChain(base http.Handler, log zerolog.Logger, cfg HttpChainConfig) http.
 func GrpcUnaryOptions(log zerolog.Logger, cfg GrpcChainConfig) []grpc.ServerOption {
 	var interceptors []grpc.UnaryServerInterceptor
 
-	if cfg.Auth != nil {
+	if cfg.Auth == nil || !cfg.Auth.Enabled {
+		interceptors = append(interceptors, auth.MockUnaryIdentity())
+	} else {
+		if cfg.Auth.Verifier == nil {
+			panic("middleware: auth enabled but verifier is nil")
+		}
 		interceptors = append(interceptors, auth.Unary(cfg.Auth.Verifier, log))
 	}
+
 	if cfg.Logging {
 		interceptors = append(interceptors, logger.Unary(log))
 	}
@@ -51,10 +63,5 @@ func GrpcUnaryOptions(log zerolog.Logger, cfg GrpcChainConfig) []grpc.ServerOpti
 	if cfg.Recovery {
 		interceptors = append(interceptors, recovery.Unary(log))
 	}
-	if len(interceptors) == 0 {
-		return nil
-	}
-	return []grpc.ServerOption{
-		grpc.ChainUnaryInterceptor(interceptors...),
-	}
+	return []grpc.ServerOption{grpc.ChainUnaryInterceptor(interceptors...)}
 }

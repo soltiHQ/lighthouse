@@ -29,7 +29,7 @@ func main() {
 	// storage layer
 	store := inmemory.New()
 
-	// bootstrap (idempotent)
+	// bootstrap (idempotent) TODO:  do not execute if auth_config.go Enabled=false or nil
 	if err := bootstrap.Run(rootCtx, logger, store); err != nil {
 		logger.Error().Err(err).Msg("bootstrap failed")
 		return
