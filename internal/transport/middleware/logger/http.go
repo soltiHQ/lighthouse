@@ -13,7 +13,7 @@ func HTTP(logger zerolog.Logger) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			metrics := httpsnoop.CaptureMetrics(next, w, r)
 
-			ev := logger.Debug().
+			ev := logger.Info().
 				Str("method", r.Method).
 				Str("path", r.URL.Path).
 				Str("remote_addr", remoteAddrHTTP(r)).

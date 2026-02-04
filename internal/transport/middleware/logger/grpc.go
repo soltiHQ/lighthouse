@@ -18,7 +18,7 @@ func Unary(logger zerolog.Logger) grpc.UnaryServerInterceptor {
 		duration := time.Since(start)
 		code := status.Code(err)
 
-		ev := logger.Debug().
+		ev := logger.Info().
 			Str("method", info.FullMethod).
 			Str("remote_addr", remoteAddrGRPC(ctx)).
 			Str("status", code.String()).

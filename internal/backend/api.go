@@ -23,6 +23,10 @@ func AgentList(ctx context.Context, logger zerolog.Logger, store storage.Storage
 	if err != nil {
 		return nil, err
 	}
+	logger.Debug().
+		Int("agents_count", len(res.Items)).
+		Str("op", "AgentList").
+		Msg("backend operation completed")
 
 	out := make([]*models.Agent, 0, len(res.Items))
 	for _, a := range res.Items {
