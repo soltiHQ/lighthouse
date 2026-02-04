@@ -5,6 +5,7 @@ import (
 
 	"github.com/soltiHQ/control-plane/auth"
 	"github.com/soltiHQ/control-plane/domain"
+	"github.com/soltiHQ/control-plane/internal/backend/models"
 	"github.com/soltiHQ/control-plane/internal/storage"
 	"github.com/soltiHQ/control-plane/internal/transportctx"
 
@@ -12,7 +13,7 @@ import (
 )
 
 // AgentList returns a list of all agents.
-func AgentList(ctx context.Context, logger zerolog.Logger, store storage.Storage) ([]*domain.AgentModel, error) {
+func AgentList(ctx context.Context, logger zerolog.Logger, store storage.Storage) ([]*models.Agent, error) {
 	id, ok := transportctx.Identity(ctx)
 	if !ok || !id.HasPermission(string(domain.PermAgentsGet)) {
 		return nil, auth.ErrUnauthorized
@@ -22,5 +23,10 @@ func AgentList(ctx context.Context, logger zerolog.Logger, store storage.Storage
 	if err != nil {
 		return nil, err
 	}
-	return res.Items, nil
+
+	out := make([]*models.Agent, 0, len(res.Items))
+	for _, a := range res.Items {
+		out = append(out, models.NewAgent(a))
+	}
+	return out, nil
 }
