@@ -9,7 +9,7 @@ vars:
     sh: grep '^go ' {{.git_root}}/go.mod | awk '{print $2}'
   alpinejs_version: "3.13.5"
   cache_dir: ".cache"
-  image_patch: "-1"
+  image_patch: "-2"
 
 tasks:
   default:
@@ -109,6 +109,7 @@ tasks:
     dir: "{{.git_root}}"
     deps:
       - go/buf
+      - go/templ
     cmds:
       - task: _golang/tool
         vars:
@@ -120,6 +121,7 @@ tasks:
     dir: "{{.git_root}}"
     deps:
       - go/tidy
+      - go/templ
     cmds:
       - task: _golang/tool
         vars:
@@ -169,3 +171,9 @@ tasks:
     cmds:
       - 'GOMODCACHE="$PWD/.cache/go/pkg/mod" go clean -modcache'
     silent: true
+
+  go/templ/watch:
+    desc: "Run 'templ generate' with watch"
+    dir: "{{.git_root}}"
+    cmds:
+      - templ generate --watch
