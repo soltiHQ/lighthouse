@@ -3,9 +3,8 @@ tmp_dir = "tmp"
 
 [build]
 cmd = "go run ./cmd/lighthouse/main.go"
-bin = "tmp/app"
-include_ext = ["go", "templ", "css", "html"]
+include_ext = ["go", "templ"]
 exclude_dir = ["tmp", "vendor", ".cache"]
-include_dir = ["ui", "cmd", "internal"]
-delay = 500
+include_dir = ["cmd", "internal", "ui"]
+delay = 300
 stop_on_error = true
