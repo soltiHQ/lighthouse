@@ -3,6 +3,7 @@ module github.com/soltiHQ/control-plane
 go 1.25
 
 require (
+	github.com/a-h/templ v0.3.977
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/rs/zerolog v1.34.0
@@ -14,7 +15,6 @@ require (
 )
 
 require (
-	github.com/a-h/templ v0.3.977 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	golang.org/x/net v0.49.0 // indirect

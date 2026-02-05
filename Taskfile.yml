@@ -101,7 +101,9 @@ tasks:
     desc: Generate templ files
     dir: "{{.git_root}}"
     cmds:
-      - templ generate
+      - task: _golang/tool
+        vars:
+          CMD: "templ generate"
     silent: true
 
   go/tidy:
