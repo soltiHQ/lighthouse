@@ -39,3 +39,6 @@ ui/js/alpine.min.js
 
 # protogen
 domain/gen/
+
+# templ
+ui/**/*_templ.go
