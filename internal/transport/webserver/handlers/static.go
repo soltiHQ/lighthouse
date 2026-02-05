@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"io/fs"
 	"net/http"
 
 	"github.com/rs/zerolog"
@@ -13,11 +14,13 @@ type Static struct {
 }
 
 func NewStatic(logger zerolog.Logger) *Static {
-	fs := http.FS(ui.Static)
-
+	sub, err := fs.Sub(ui.Static, "static")
+	if err != nil {
+		panic(err)
+	}
 	return &Static{
 		logger:  logger.With().Str("handler", "static").Logger(),
-		handler: http.StripPrefix("/static/", http.FileServer(fs)),
+		handler: http.StripPrefix("/static/", http.FileServer(http.FS(sub))),
 	}
 }
 
