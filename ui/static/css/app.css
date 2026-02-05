@@ -8,6 +8,8 @@
 
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
     html {
         font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
