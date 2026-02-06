@@ -90,21 +90,35 @@ func (s *Store) GetUserBySubject(ctx context.Context, subject string) (*model.Us
 		return nil, storage.ErrInvalidArgument
 	}
 
-	res, err := s.users.List(ctx, func(u *model.User) bool {
-		return u.Subject() == subject
-	}, storage.ListOptions{Limit: 2})
-	if err != nil {
-		return nil, err
-	}
+	s.users.mu.RLock()
+	defer s.users.mu.RUnlock()
 
-	switch len(res.Items) {
-	case 0:
-		return nil, storage.ErrNotFound
-	case 1:
-		return res.Items[0], nil
-	default:
-		return nil, storage.ErrConflict
+	var (
+		found *model.User
+		i     int
+	)
+	for _, u := range s.users.data {
+		if i%1000 == 0 {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
+			}
+		}
+		i++
+
+		if u.Subject() != subject {
+			continue
+		}
+		if found != nil {
+			return nil, storage.ErrConflict
+		}
+		found = u
 	}
+	if found == nil {
+		return nil, storage.ErrNotFound
+	}
+	return found.Clone(), nil
 }
 
 func (s *Store) ListUsers(ctx context.Context, filter storage.UserFilter, opts storage.ListOptions) (*storage.UserListResult, error) {
@@ -143,21 +157,35 @@ func (s *Store) GetCredentialByUserAndAuth(ctx context.Context, userID string, a
 		return nil, storage.ErrInvalidArgument
 	}
 
-	res, err := s.credentials.List(ctx, func(c *model.Credential) bool {
-		return c.UserID() == userID && c.AuthKind() == auth
-	}, storage.ListOptions{Limit: 2})
-	if err != nil {
-		return nil, err
-	}
+	s.credentials.mu.RLock()
+	defer s.credentials.mu.RUnlock()
 
-	switch len(res.Items) {
-	case 0:
-		return nil, storage.ErrNotFound
-	case 1:
-		return res.Items[0], nil
-	default:
-		return nil, storage.ErrConflict
+	var (
+		found *model.Credential
+		i     int
+	)
+	for _, c := range s.credentials.data {
+		if i%1000 == 0 {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
+			}
+		}
+		i++
+
+		if c.UserID() != userID || c.AuthKind() != auth {
+			continue
+		}
+		if found != nil {
+			return nil, storage.ErrConflict
+		}
+		found = c
 	}
+	if found == nil {
+		return nil, storage.ErrNotFound
+	}
+	return found.Clone(), nil
 }
 
 func (s *Store) ListCredentialsByUser(ctx context.Context, userID string) ([]*model.Credential, error) {
@@ -197,21 +225,35 @@ func (s *Store) GetVerifierByCredential(ctx context.Context, credentialID string
 		return nil, storage.ErrInvalidArgument
 	}
 
-	res, err := s.verifiers.List(ctx, func(v *model.Verifier) bool {
-		return v.CredentialID() == credentialID
-	}, storage.ListOptions{Limit: 2})
-	if err != nil {
-		return nil, err
-	}
+	s.verifiers.mu.RLock()
+	defer s.verifiers.mu.RUnlock()
 
-	switch len(res.Items) {
-	case 0:
-		return nil, storage.ErrNotFound
-	case 1:
-		return res.Items[0], nil
-	default:
-		return nil, storage.ErrConflict
+	var (
+		found *model.Verifier
+		i     int
+	)
+	for _, v := range s.verifiers.data {
+		if i%1000 == 0 {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
+			}
+		}
+		i++
+
+		if v.CredentialID() != credentialID {
+			continue
+		}
+		if found != nil {
+			return nil, storage.ErrConflict
+		}
+		found = v
 	}
+	if found == nil {
+		return nil, storage.ErrNotFound
+	}
+	return found.Clone(), nil
 }
 
 func (s *Store) DeleteVerifier(ctx context.Context, id string) error {
@@ -237,10 +279,10 @@ func (s *Store) RotateRefresh(ctx context.Context, sessionID string, newHash []b
 	}
 	return s.sessions.Update(ctx, sessionID, func(cur *model.Session) (*model.Session, error) {
 		if err := cur.SetRefreshHash(newHash); err != nil {
-			return nil, storage.ErrInvalidArgument
+			return nil, err
 		}
 		if err := cur.SetExpiresAt(newExpiresAt); err != nil {
-			return nil, storage.ErrInvalidArgument
+			return nil, err
 		}
 		return cur, nil
 	})
@@ -252,7 +294,7 @@ func (s *Store) RevokeSession(ctx context.Context, sessionID string, revokedAt t
 	}
 	return s.sessions.Update(ctx, sessionID, func(cur *model.Session) (*model.Session, error) {
 		if err := cur.Revoke(revokedAt); err != nil {
-			return nil, storage.ErrInvalidArgument
+			return nil, err
 		}
 		return cur, nil
 	})
@@ -294,16 +336,7 @@ func (s *Store) GetRoles(ctx context.Context, ids []string) ([]*model.Role, erro
 		seen[id] = struct{}{}
 		unique = append(unique, id)
 	}
-
-	out := make([]*model.Role, 0, len(unique))
-	for _, id := range unique {
-		r, err := s.roles.Get(ctx, id)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, r)
-	}
-	return out, nil
+	return s.roles.GetMany(ctx, unique)
 }
 
 func (s *Store) GetRoleByName(ctx context.Context, name string) (*model.Role, error) {
@@ -311,21 +344,36 @@ func (s *Store) GetRoleByName(ctx context.Context, name string) (*model.Role, er
 		return nil, storage.ErrInvalidArgument
 	}
 
-	res, err := s.roles.List(ctx, func(r *model.Role) bool {
-		return r.Name() == name
-	}, storage.ListOptions{Limit: 2})
-	if err != nil {
-		return nil, err
+	s.roles.mu.RLock()
+	defer s.roles.mu.RUnlock()
+
+	var (
+		found *model.Role
+		i     int
+	)
+	for _, r := range s.roles.data {
+		if i%1000 == 0 {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
+			}
+		}
+		i++
+
+		if r.Name() != name {
+			continue
+		}
+		if found != nil {
+			return nil, storage.ErrConflict
+		}
+		found = r
 	}
 
-	switch len(res.Items) {
-	case 0:
+	if found == nil {
 		return nil, storage.ErrNotFound
-	case 1:
-		return res.Items[0], nil
-	default:
-		return nil, storage.ErrConflict
 	}
+	return found.Clone(), nil
 }
 
 func (s *Store) ListRoles(ctx context.Context, filter storage.RoleFilter, opts storage.ListOptions) (*storage.RoleListResult, error) {

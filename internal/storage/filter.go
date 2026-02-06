@@ -9,17 +9,26 @@ type UserFilterSeal struct{}
 // RoleFilterSeal is a marker type used to tag valid RoleFilter implementations.
 type RoleFilterSeal struct{}
 
-// AgentFilter defines a storage-specific query abstraction for agents.
+// AgentFilter defines a backend-specific query object for agents.
+//
+// A filter must be constructed by the same storage backend that consumes it.
+// Passing a filter created for a different backend must return ErrInvalidArgument.
 type AgentFilter interface {
 	IsAgentFilter(AgentFilterSeal)
 }
 
-// UserFilter defines a storage-specific query abstraction for users.
+// UserFilter defines a backend-specific query object for users.
+//
+// A filter must be constructed by the same storage backend that consumes it.
+// Passing a filter created for a different backend must return ErrInvalidArgument.
 type UserFilter interface {
 	IsUserFilter(UserFilterSeal)
 }
 
-// RoleFilter defines a storage-specific query abstraction for roles.
+// RoleFilter defines a backend-specific query object for roles.
+//
+// A filter must be constructed by the same storage backend that consumes it.
+// Passing a filter created for a different backend must return ErrInvalidArgument.
 type RoleFilter interface {
 	IsRoleFilter(RoleFilterSeal)
 }

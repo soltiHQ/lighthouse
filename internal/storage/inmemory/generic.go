@@ -126,6 +126,37 @@ func (s *GenericStore[T]) Get(_ context.Context, id string) (T, error) {
 	return entity.Clone(), nil
 }
 
+// GetMany retrieves multiple entities by IDs in a single read lock.
+//
+// Semantics:
+//   - Returns storage.ErrInvalidArgument if ids is empty or contains empty elements.
+//   - Returns storage.ErrNotFound if any id is missing.
+//   - Preserves the order of ids (caller can deduplicate before calling).
+//   - Returns deep clones (same as Get).
+func (s *GenericStore[T]) GetMany(_ context.Context, ids []string) ([]T, error) {
+	if len(ids) == 0 {
+		return nil, storage.ErrInvalidArgument
+	}
+	for _, id := range ids {
+		if id == "" {
+			return nil, storage.ErrInvalidArgument
+		}
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	out := make([]T, 0, len(ids))
+	for _, id := range ids {
+		entity, ok := s.data[id]
+		if !ok {
+			return nil, storage.ErrNotFound
+		}
+		out = append(out, entity.Clone())
+	}
+	return out, nil
+}
+
 // List retrieves entities with optional filtering and cursor-based pagination.
 //
 // Filtering:
