@@ -38,6 +38,7 @@ func NewCredential(id, userID string, auth kind.Auth) (*Credential, error) {
 		id:        id,
 		userID:    userID,
 		auth:      auth,
+		secrets:   make(map[string]string),
 	}, nil
 }
 
@@ -74,11 +75,11 @@ func (c *Credential) SecretsAll() map[string]string {
 
 // SetSecret sets a secret value by key and bumps UpdatedAt.
 func (c *Credential) SetSecret(key, value string) error {
-	if key == "" {
+	if key == "" || value == "" {
 		return domain.ErrFieldEmpty
 	}
-	if value == "" {
-		return domain.ErrFieldEmpty
+	if c.secrets == nil {
+		c.secrets = make(map[string]string)
 	}
 	c.secrets[key] = value
 	c.updatedAt = time.Now()
@@ -105,11 +106,16 @@ func (c *Credential) DeleteSecret(key string) error {
 
 // Clone creates a deep copy of the credential model.
 func (c *Credential) Clone() *Credential {
+	secrets := make(map[string]string, len(c.secrets))
+	for k, v := range c.secrets {
+		secrets[k] = v
+	}
 	return &Credential{
 		createdAt: c.createdAt,
 		updatedAt: c.updatedAt,
 		id:        c.id,
 		userID:    c.userID,
 		auth:      c.auth,
+		secrets:   secrets,
 	}
 }

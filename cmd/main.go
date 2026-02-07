@@ -6,12 +6,23 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/rs/zerolog"
 
+	"github.com/soltiHQ/control-plane/domain/kind"
+	"github.com/soltiHQ/control-plane/domain/model"
+	"github.com/soltiHQ/control-plane/internal/auth/auth/session"
+	"github.com/soltiHQ/control-plane/internal/auth/credentials"
+	"github.com/soltiHQ/control-plane/internal/auth/providers"
+	passwordprovider "github.com/soltiHQ/control-plane/internal/auth/providers/password"
+	"github.com/soltiHQ/control-plane/internal/auth/rbac"
+	"github.com/soltiHQ/control-plane/internal/auth/token"
+	"github.com/soltiHQ/control-plane/internal/auth/token/jwt"
 	"github.com/soltiHQ/control-plane/internal/handlers"
 	"github.com/soltiHQ/control-plane/internal/server"
 	"github.com/soltiHQ/control-plane/internal/server/runner/httpserver"
+	"github.com/soltiHQ/control-plane/internal/storage/inmemory"
 	"github.com/soltiHQ/control-plane/internal/transport/http/middleware"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
 )
@@ -19,34 +30,83 @@ import (
 func main() {
 	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
 
-	// Responders.
+	// ---------------------------------------------------------------
+	// Storage
+	// ---------------------------------------------------------------
+	store := inmemory.New()
+
+	// ---------------------------------------------------------------
+	// Bootstrap admin user
+	// ---------------------------------------------------------------
+	if err := bootstrap(context.Background(), store); err != nil {
+		logger.Fatal().Err(err).Msg("failed to bootstrap")
+	}
+	logger.Info().Msg("bootstrap: admin/admin created")
+
+	// ---------------------------------------------------------------
+	// Auth stack
+	// ---------------------------------------------------------------
+	jwtSecret := []byte("dev-secret-change-me-in-production")
+	clk := token.RealClock()
+
+	issuer := jwt.NewHSIssuer(jwtSecret, clk)
+	verifier := jwt.NewHSVerifier("control-plane", "control-plane", jwtSecret, clk)
+	resolver := rbac.NewResolver(store)
+
+	sessionSvc := session.New(
+		store,
+		issuer,
+		clk,
+		session.Config{
+			AccessTTL:     15 * time.Minute,
+			RefreshTTL:    7 * 24 * time.Hour,
+			Issuer:        "control-plane",
+			Audience:      "control-plane",
+			RotateRefresh: true,
+		},
+		resolver,
+		map[kind.Auth]providers.Provider{
+			kind.Password: passwordprovider.New(store),
+		},
+	)
+
+	// ---------------------------------------------------------------
+	// Responders & Handlers
+	// ---------------------------------------------------------------
 	jsonResp := response.NewJSON()
 
-	// Handlers.
 	demo := handlers.NewDemo(jsonResp)
+	authHandler := handlers.NewAuth(sessionSvc, jsonResp)
 
-	// Router.
+	// ---------------------------------------------------------------
+	// Router
+	// ---------------------------------------------------------------
 	mux := http.NewServeMux()
-	demo.Routes(mux)
 
-	// Middleware chain.
-	// CORS → RequestID → Logger → Recovery → Handler
-	cors := middleware.CORS(middleware.CORSConfig{
-		AllowOrigins: []string{"*"},
-	})
+	// Public — no auth.
+	authHandler.Routes(mux) // POST /v1/login
 
+	// Protected — auth required.
+	authMw := middleware.Auth(verifier)
+	mux.Handle("GET /api/hello", authMw(http.HandlerFunc(demo.Hello)))
+
+	// ---------------------------------------------------------------
+	// Global middleware chain (outer → inner)
+	// CORS → RequestID → Logger → Recovery → Router
+	// ---------------------------------------------------------------
 	var handler http.Handler = mux
 	handler = middleware.Recovery(logger)(handler)
 	handler = middleware.Logger(logger)(handler)
 	handler = middleware.RequestID()(handler)
-	handler = cors(handler)
+	handler = middleware.CORS(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+	})(handler)
 
-	// HTTP server runner.
+	// ---------------------------------------------------------------
+	// Server
+	// ---------------------------------------------------------------
 	httpRunner, err := httpserver.New(
-		httpserver.Config{
-			Name: "http",
-			Addr: ":8080",
-		},
+		httpserver.Config{Name: "http", Addr: ":8080"},
 		logger,
 		handler,
 	)
@@ -54,17 +114,14 @@ func main() {
 		logger.Fatal().Err(err).Msg("failed to create http server")
 	}
 
-	// Server orchestrator.
-	srv, err := server.New(
-		server.Config{},
-		logger,
-		httpRunner,
-	)
+	srv, err := server.New(server.Config{}, logger, httpRunner)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to create server")
 	}
 
-	// Graceful shutdown on SIGINT/SIGTERM.
+	// ---------------------------------------------------------------
+	// Run
+	// ---------------------------------------------------------------
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -76,4 +133,46 @@ func main() {
 	}
 
 	logger.Info().Msg("server stopped")
+}
+
+// bootstrap seeds an admin user with all permissions.
+func bootstrap(ctx context.Context, store *inmemory.Store) error {
+	// Role with all permissions.
+	role, err := model.NewRole("role-admin", "admin")
+	if err != nil {
+		return err
+	}
+	for _, p := range kind.All {
+		if err := role.PermissionAdd(p); err != nil {
+			return err
+		}
+	}
+	if err := store.UpsertRole(ctx, role); err != nil {
+		return err
+	}
+
+	// User.
+	user, err := model.NewUser("user-admin", "admin")
+	if err != nil {
+		return err
+	}
+	user.NameSet("Admin")
+	user.EmailSet("admin@local")
+	if err := user.RoleAdd("role-admin"); err != nil {
+		return err
+	}
+	if err := store.UpsertUser(ctx, user); err != nil {
+		return err
+	}
+
+	// Password credential.
+	cred, err := credentials.NewPasswordCredential("cred-admin", "user-admin", "admin", 0)
+	if err != nil {
+		return err
+	}
+	if err := store.UpsertCredential(ctx, cred); err != nil {
+		return err
+	}
+
+	return nil
 }
