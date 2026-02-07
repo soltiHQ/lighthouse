@@ -11,6 +11,7 @@ const (
 	defaultReadTimeout       = 30 * time.Second
 	defaultWriteTimeout      = 30 * time.Second
 	defaultIdleTimeout       = 60 * time.Second
+	defaultMaxHeaderBytes    = 1 << 14 // 16 KB
 )
 
 // Config controls HTTP server runtime behavior.
@@ -19,6 +20,7 @@ type Config struct {
 	ReadTimeout       time.Duration
 	WriteTimeout      time.Duration
 	IdleTimeout       time.Duration
+	MaxHeaderBytes    int
 
 	Name string
 	Addr string
@@ -42,6 +44,9 @@ func (c Config) withDefaults() Config {
 	}
 	if c.IdleTimeout <= 0 {
 		c.IdleTimeout = defaultIdleTimeout
+	}
+	if c.MaxHeaderBytes <= 0 {
+		c.MaxHeaderBytes = defaultMaxHeaderBytes
 	}
 	return c
 }

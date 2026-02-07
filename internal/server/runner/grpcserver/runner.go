@@ -48,16 +48,12 @@ func New(cfg Config, logger zerolog.Logger, srv *grpc.Server) (*Runner, error) {
 func (r *Runner) Name() string { return r.cfg.Name }
 
 // Start binds the listener and serves until Stop() shuts it down.
-// Blocks until the server exits.
-func (r *Runner) Start(ctx context.Context) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
+func (r *Runner) Start(_ context.Context) error {
 	if !r.started.CompareAndSwap(false, true) {
 		return ErrAlreadyStarted
 	}
 
-	ln, err := net.Listen("tcp", r.cfg.Addr)
+	ln, err := net.Listen(r.cfg.Network, r.cfg.Addr)
 	if err != nil {
 		close(r.ready)
 		return err
@@ -70,14 +66,6 @@ func (r *Runner) Start(ctx context.Context) error {
 		Str("addr", r.cfg.Addr).
 		Msg("grpc server listening")
 
-	// Failsafe: if ctx is canceled and orchestrator doesn't call Stop() (or calls later),
-	// we still try to shut down gracefully.
-	go func() {
-		<-ctx.Done()
-		// GracefulStop blocks; kick it asynchronously.
-		go r.srv.GracefulStop()
-	}()
-
 	err = r.srv.Serve(ln)
 	if err == nil || errors.Is(err, grpc.ErrServerStopped) {
 		return nil
@@ -87,11 +75,6 @@ func (r *Runner) Start(ctx context.Context) error {
 
 // Stop attempts graceful shutdown and falls back to hard stop when ctx expires.
 func (r *Runner) Stop(ctx context.Context) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	// Wait for Start to initialize the listener (or fail).
 	select {
 	case <-r.ready:
 	case <-ctx.Done():
@@ -120,7 +103,6 @@ func (r *Runner) Stop(ctx context.Context) error {
 			Msg("grpc server stopped")
 		return nil
 	case <-ctx.Done():
-		// Hard stop: abort in-flight RPCs, unblock Serve().
 		srv.Stop()
 		r.logger.Warn().
 			Str("runner", r.cfg.Name).

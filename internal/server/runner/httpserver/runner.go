@@ -16,8 +16,9 @@ type Runner struct {
 	handler http.Handler
 	cfg     Config
 
-	srv *http.Server
-	ln  net.Listener
+	srv   *http.Server
+	ln    net.Listener
+	ready chan struct{}
 
 	started atomic.Bool
 }
@@ -25,32 +26,34 @@ type Runner struct {
 // New creates an HTTP server runner.
 func New(cfg Config, logger zerolog.Logger, handler http.Handler) (*Runner, error) {
 	if handler == nil {
-		return nil, errors.New("httpserver: nil handler")
+		return nil, ErrNilHandler
 	}
 
 	cfg = cfg.withDefaults()
 	if cfg.Addr == "" {
-		return nil, errors.New("httpserver: empty addr")
+		return nil, ErrEmptyAddr
 	}
-	r := &Runner{
+
+	return &Runner{
 		handler: handler,
 		logger:  logger,
 		cfg:     cfg,
-	}
-	return r, nil
+		ready:   make(chan struct{}),
+	}, nil
 }
 
 // Name returns the runner name.
 func (r *Runner) Name() string { return r.cfg.Name }
 
-// Start binds the listener and serves until ctx is canceled or Stop() shuts it down.
+// Start binds the listener and serves until Stop() shuts it down.
 func (r *Runner) Start(_ context.Context) error {
 	if !r.started.CompareAndSwap(false, true) {
-		return errors.New("httpserver: already started")
+		return ErrAlreadyStarted
 	}
 
 	ln, err := net.Listen("tcp", r.cfg.Addr)
 	if err != nil {
+		close(r.ready)
 		return err
 	}
 	r.ln = ln
@@ -63,10 +66,12 @@ func (r *Runner) Start(_ context.Context) error {
 		ReadTimeout:       r.cfg.ReadTimeout,
 		WriteTimeout:      r.cfg.WriteTimeout,
 		IdleTimeout:       r.cfg.IdleTimeout,
+		MaxHeaderBytes:    r.cfg.MaxHeaderBytes,
 
 		BaseContext: r.cfg.BaseContext,
 		ConnContext: r.cfg.ConnContext,
 	}
+	close(r.ready)
 
 	r.logger.Info().
 		Str("runner", r.cfg.Name).
@@ -82,6 +87,12 @@ func (r *Runner) Start(_ context.Context) error {
 
 // Stop gracefully shuts down the server within the ctx deadline.
 func (r *Runner) Stop(ctx context.Context) error {
+	select {
+	case <-r.ready:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
 	srv := r.srv
 	if srv == nil {
 		return nil
@@ -93,6 +104,10 @@ func (r *Runner) Stop(ctx context.Context) error {
 
 	if err := srv.Shutdown(ctx); err != nil {
 		_ = srv.Close()
+		r.logger.Warn().
+			Err(err).
+			Str("runner", r.cfg.Name).
+			Msg("http server hard-closed (timeout)")
 		return err
 	}
 	return nil
