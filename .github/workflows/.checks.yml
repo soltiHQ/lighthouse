@@ -25,7 +25,7 @@ jobs:
       - name: Run fmt
         uses: soltiHQ/actions/taskfile@main
         with:
-          command: go/fumpt
+          command: "go:fumpt"
 
       - name: Put Cache
         uses: ./.github/actions/cache-put
@@ -53,7 +53,7 @@ jobs:
       - name: Run lint
         uses: soltiHQ/actions/taskfile@main
         with:
-          command: go/lint
+          command: "go:lint"
 
       - name: Put Cache
         uses: ./.github/actions/cache-put
@@ -81,7 +81,7 @@ jobs:
       - name: Run Job
         uses: soltiHQ/actions/taskfile@main
         with:
-          command: go/test
+          command: "go:test"
 
       - name: Put Cache
         uses: ./.github/actions/cache-put
