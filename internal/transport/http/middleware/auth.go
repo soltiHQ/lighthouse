@@ -60,14 +60,18 @@ func RequirePermission(perm kind.Permission) func(http.Handler) http.Handler {
 }
 
 func extractBearer(r *http.Request) string {
-	h := r.Header.Get("Authorization")
-	if h == "" {
-		return ""
+	// Header first (API clients).
+	if h := r.Header.Get("Authorization"); h != "" {
+		const prefix = "Bearer "
+		if len(h) >= len(prefix) && strings.EqualFold(h[:len(prefix)], prefix) {
+			return strings.TrimSpace(h[len(prefix):])
+		}
 	}
-	// "Bearer <token>"
-	const prefix = "Bearer "
-	if len(h) < len(prefix) || !strings.EqualFold(h[:len(prefix)], prefix) {
-		return ""
+
+	// Cookie fallback (browser sessions).
+	if c, err := r.Cookie("access_token"); err == nil && c.Value != "" {
+		return c.Value
 	}
-	return strings.TrimSpace(h[len(prefix):])
+
+	return ""
 }

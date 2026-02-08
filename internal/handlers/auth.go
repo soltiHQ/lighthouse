@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/internal/auth/auth/session"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
 )
@@ -57,7 +58,7 @@ func (a *Auth) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pair, id, err := a.session.Login(r.Context(), req.Subject, req.Password)
+	pair, id, err := a.session.Login(r.Context(), kind.Password, req.Subject, req.Password)
 	if err != nil {
 		// session.Login returns auth.ErrInvalidCredentials, auth.ErrUnauthorized, etc.
 		// Don't leak internals — always 401 for auth failures.

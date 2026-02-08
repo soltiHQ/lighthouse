@@ -1,17 +1,14 @@
 package response
 
 import (
-	"html/template"
-	"io/fs"
 	"net/http"
+
+	"github.com/a-h/templ"
 
 	"github.com/soltiHQ/control-plane/internal/transportctx"
 )
 
-const (
-	defaultErrorTemplate = "error.html"
-	defaultLoginPath     = "/login"
-)
+const defaultLoginPath = "/login"
 
 // HTMLConfig controls HTMLResponder behavior.
 type HTMLConfig struct {
@@ -19,50 +16,40 @@ type HTMLConfig struct {
 	// Defaults to "/login".
 	LoginPath string
 
-	// ErrorTemplate is the template name for error pages.
-	// Defaults to "error.html".
-	ErrorTemplate string
+	// ErrorPage is a templ component factory for error pages.
+	// Receives code, message, and request ID.
+	ErrorPage func(code int, msg, requestID string) templ.Component
 }
 
 func (c HTMLConfig) withDefaults() HTMLConfig {
 	if c.LoginPath == "" {
 		c.LoginPath = defaultLoginPath
 	}
-	if c.ErrorTemplate == "" {
-		c.ErrorTemplate = defaultErrorTemplate
-	}
 	return c
 }
 
-// HTMLResponder renders HTML responses using Go templates.
+// HTMLResponder renders responses using templ components.
 type HTMLResponder struct {
-	templates *template.Template
-	cfg       HTMLConfig
+	cfg HTMLConfig
 }
 
 // NewHTML creates an HTMLResponder.
-func NewHTML(fsys fs.FS, cfg HTMLConfig) (*HTMLResponder, error) {
-	tmpl, err := template.ParseFS(fsys, "templates/*.html", "templates/**/*.html")
-	if err != nil {
-		return nil, err
-	}
+func NewHTML(cfg HTMLConfig) *HTMLResponder {
 	cfg = cfg.withDefaults()
-	return &HTMLResponder{
-		templates: tmpl,
-		cfg:       cfg,
-	}, nil
+	return &HTMLResponder{cfg: cfg}
 }
 
-// Respond renders the template specified in v.Template with v.Data.
+// Respond renders a templ component from v.Component.
+// If v is nil or v.Component is nil, writes only the status code.
 func (h *HTMLResponder) Respond(w http.ResponseWriter, r *http.Request, code int, v *View) {
-	if v == nil || v.Template == "" {
+	if v == nil || v.Component == nil {
 		w.WriteHeader(code)
 		return
 	}
-	h.render(w, r, code, v.Template, v.Data)
+	h.render(w, r, code, v.Component)
 }
 
-// Error renders an error page or redirects to log in for 401.
+// Error renders an error page or redirects to login for 401.
 func (h *HTMLResponder) Error(w http.ResponseWriter, r *http.Request, code int, msg string) {
 	if code == http.StatusUnauthorized {
 		target := h.cfg.LoginPath + "?redirect=" + r.URL.RequestURI()
@@ -70,25 +57,19 @@ func (h *HTMLResponder) Error(w http.ResponseWriter, r *http.Request, code int, 
 		return
 	}
 
-	data := map[string]any{
-		"Code":    code,
-		"Message": msg,
+	if h.cfg.ErrorPage == nil {
+		http.Error(w, msg, code)
+		return
 	}
-	if rid, ok := transportctx.RequestID(r.Context()); ok {
-		data["RequestID"] = rid
-	}
-	h.render(w, r, code, h.cfg.ErrorTemplate, data)
+
+	rid, _ := transportctx.RequestID(r.Context())
+	h.render(w, r, code, h.cfg.ErrorPage(code, msg, rid))
 }
 
-func (h *HTMLResponder) render(w http.ResponseWriter, _ *http.Request, code int, name string, data any) {
+func (h *HTMLResponder) render(w http.ResponseWriter, r *http.Request, code int, c templ.Component) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(code)
-	if err := h.templates.ExecuteTemplate(w, name, data); err != nil {
-		_, _ = w.Write([]byte("<!-- template error -->"))
+	if err := c.Render(r.Context(), w); err != nil {
+		_, _ = w.Write([]byte("<!-- render error -->"))
 	}
-}
-
-// isHTMX reports whether the request was made by HTMX.
-func isHTMX(r *http.Request) bool {
-	return r.Header.Get("HX-Request") == "true"
 }

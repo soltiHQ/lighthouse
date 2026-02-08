@@ -74,9 +74,11 @@ func main() {
 	// Responders & Handlers
 	// ---------------------------------------------------------------
 	jsonResp := response.NewJSON()
+	htmlResp := response.NewHTML(response.HTMLConfig{})
 
 	demo := handlers.NewDemo(jsonResp)
 	authHandler := handlers.NewAuth(sessionSvc, jsonResp)
+	uiHandler := handlers.NewUI(logger, sessionSvc, store, htmlResp)
 
 	// ---------------------------------------------------------------
 	// Router
@@ -85,6 +87,7 @@ func main() {
 
 	// Public — no auth.
 	authHandler.Routes(mux) // POST /v1/login
+	uiHandler.Routes(mux)   // GET /login, POST /login
 
 	// Protected — auth required.
 	authMw := middleware.Auth(verifier)
