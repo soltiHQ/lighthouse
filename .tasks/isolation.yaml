@@ -37,7 +37,7 @@ tasks:
     requires: { vars: [ CMD ] }
     cmds:
       - cmd: mkdir -p "{{.git_root}}/{{.cache_dir}}"
-      - task: _docker/run
+      - task: _docker
         vars:
           IMAGE: "ghcr.io/soltihq/golang-ci:{{.go_version}}{{.image_patch}}"
           CMD: "{{.CMD}}"
