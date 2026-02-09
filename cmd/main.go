@@ -80,6 +80,7 @@ func main() {
 	authHandler := handlers.NewAuth(sessionSvc, jsonResp)
 	uiHandler := handlers.NewUI(logger, sessionSvc, store, htmlResp)
 	staticHandler := handlers.NewStatic(logger)
+	errHandler := handlers.NewErrors(jsonResp, htmlResp)
 
 	// ---------------------------------------------------------------
 	// Router
@@ -95,17 +96,25 @@ func main() {
 	authMw := middleware.Auth(verifier)
 	mux.Handle("GET /api/hello", authMw(http.HandlerFunc(demo.Hello)))
 
-	// ---------------------------------------------------------------
-	// Global middleware chain (outer → inner)
-	// CORS → RequestID → Logger → Recovery → Router
-	// ---------------------------------------------------------------
-	var handler http.Handler = mux
+	var handler http.Handler = errHandler.Wrap(mux)
 	handler = middleware.Recovery(logger)(handler)
 	handler = middleware.Logger(logger)(handler)
 	handler = middleware.RequestID()(handler)
 	handler = middleware.CORS(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 	})(handler)
+
+	// ---------------------------------------------------------------
+	// Global middleware chain (outer → inner)
+	// CORS → RequestID → Logger → Recovery → Router
+	// ---------------------------------------------------------------
+	//var handler http.Handler = mux
+	//handler = middleware.Recovery(logger)(handler)
+	//handler = middleware.Logger(logger)(handler)
+	//handler = middleware.RequestID()(handler)
+	//handler = middleware.CORS(middleware.CORSConfig{
+	//	AllowOrigins: []string{"*"},
+	//})(handler)
 
 	// ---------------------------------------------------------------
 	// Server

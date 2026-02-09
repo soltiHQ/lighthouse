@@ -35,18 +35,7 @@ func NewUI(logger zerolog.Logger, session *session.Service, store storage.Storag
 func (u *UI) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /login", u.LoginPage)
 	mux.HandleFunc("POST /login", u.LoginSubmit)
-	mux.HandleFunc("GET /404", u.NotFound)
 
-}
-
-func (u *UI) NotFound(w http.ResponseWriter, r *http.Request) {
-	u.html.Respond(w, r, http.StatusNotFound, &response.View{
-		Component: pages.ErrorPage(
-			http.StatusNotFound,
-			"Page not found",
-			"The page you are looking for doesn't exist or has been moved.",
-		),
-	})
 }
 
 // LoginPage renders the login form.
