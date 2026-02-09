@@ -80,7 +80,7 @@ func main() {
 	authHandler := handlers.NewAuth(sessionSvc, jsonResp)
 	uiHandler := handlers.NewUI(logger, sessionSvc, store, htmlResp)
 	staticHandler := handlers.NewStatic(logger)
-	errHandler := handlers.NewErrors(jsonResp, htmlResp)
+	errHandler := handlers.NewErrors()
 
 	// ---------------------------------------------------------------
 	// Router
@@ -97,6 +97,7 @@ func main() {
 	mux.Handle("GET /api/hello", authMw(http.HandlerFunc(demo.Hello)))
 
 	var handler http.Handler = errHandler.Wrap(mux)
+	handler = response.Negotiate(jsonResp, htmlResp)(handler)
 	handler = middleware.Recovery(logger)(handler)
 	handler = middleware.Logger(logger)(handler)
 	handler = middleware.RequestID()(handler)
