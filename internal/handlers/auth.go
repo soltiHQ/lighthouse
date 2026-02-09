@@ -2,10 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 
 	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/internal/auth/auth/session"
+	"github.com/soltiHQ/control-plane/internal/auth/ratelimit"
+	"github.com/soltiHQ/control-plane/internal/auth/token"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
 )
 
@@ -13,14 +16,13 @@ import (
 type Auth struct {
 	session *session.Service
 	json    *response.JSONResponder
+	limiter *ratelimit.Limiter
+	clock   token.Clock
 }
 
 // NewAuth creates an auth handler.
-func NewAuth(session *session.Service, json *response.JSONResponder) *Auth {
-	return &Auth{
-		session: session,
-		json:    json,
-	}
+func NewAuth(session *session.Service, json *response.JSONResponder, limiter *ratelimit.Limiter, clk token.Clock) *Auth {
+	return &Auth{session: session, json: json, limiter: limiter, clock: clk}
 }
 
 // Routes registers auth routes on the given mux.
@@ -58,13 +60,24 @@ func (a *Auth) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	key := loginKey(req.Subject, r)
+	now := a.clock.Now()
+
+	if a.limiter.Blocked(key, now) {
+		a.json.Error(w, r, http.StatusTooManyRequests, "too many attempts, try again later")
+		return
+	}
+
 	pair, id, err := a.session.Login(r.Context(), kind.Password, req.Subject, req.Password)
 	if err != nil {
-		// session.Login returns auth.ErrInvalidCredentials, auth.ErrUnauthorized, etc.
-		// Don't leak internals — always 401 for auth failures.
+		a.limiter.RecordFailure(key, now)
 		a.json.Error(w, r, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
+
+	a.limiter.Reset(key)
+
+	a.limiter.Reset(key)
 
 	perms := make([]string, 0, len(id.Permissions))
 	for _, p := range id.Permissions {
@@ -81,4 +94,9 @@ func (a *Auth) Login(w http.ResponseWriter, r *http.Request) {
 			Permissions:  perms,
 		},
 	})
+}
+
+func loginKey(subject string, r *http.Request) string {
+	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+	return subject + "|" + ip
 }

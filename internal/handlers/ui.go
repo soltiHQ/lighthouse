@@ -5,6 +5,8 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/soltiHQ/control-plane/domain/kind"
+	"github.com/soltiHQ/control-plane/internal/auth/ratelimit"
+	"github.com/soltiHQ/control-plane/internal/auth/token"
 
 	"github.com/soltiHQ/control-plane/internal/auth/auth/session"
 	"github.com/soltiHQ/control-plane/internal/storage"
@@ -18,15 +20,19 @@ type UI struct {
 	session *session.Service
 	store   storage.Storage
 	html    *response.HTMLResponder
+	limiter *ratelimit.Limiter
+	clock   token.Clock
 }
 
 // NewUI creates a UI handler.
-func NewUI(logger zerolog.Logger, session *session.Service, store storage.Storage, html *response.HTMLResponder) *UI {
+func NewUI(logger zerolog.Logger, session *session.Service, store storage.Storage, html *response.HTMLResponder, limiter *ratelimit.Limiter, clk token.Clock) *UI {
 	return &UI{
 		logger:  logger,
 		session: session,
 		store:   store,
 		html:    html,
+		limiter: limiter,
+		clock:   clk,
 	}
 }
 
@@ -71,8 +77,22 @@ func (u *UI) LoginSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	key := loginKey(subject, r)
+	now := u.clock.Now()
+	if u.limiter.Blocked(key, now) {
+		u.html.Respond(w, r, http.StatusTooManyRequests, &response.View{
+			Component: pages.ErrorPage(
+				http.StatusTooManyRequests,
+				"Too many attempts",
+				"Account temporarily locked. Please try again in 10 minutes.",
+			),
+		})
+		return
+	}
+
 	pair, _, err := u.session.Login(r.Context(), kind.Password, subject, password)
 	if err != nil {
+		u.limiter.RecordFailure(key, now)
 		u.logger.Warn().
 			Err(err).
 			Str("subject", subject).
@@ -81,6 +101,8 @@ func (u *UI) LoginSubmit(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login?error=Invalid+credentials&redirect="+redirect, http.StatusFound)
 		return
 	}
+
+	u.limiter.Reset(key)
 
 	// Set access token as HttpOnly cookie.
 	http.SetCookie(w, &http.Cookie{

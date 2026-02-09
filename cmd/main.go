@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/soltiHQ/control-plane/internal/auth/ratelimit"
 
 	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/domain/model"
@@ -70,6 +71,11 @@ func main() {
 		},
 	)
 
+	loginLimiter := ratelimit.New(ratelimit.Config{
+		MaxAttempts: 2,
+		BlockWindow: 10 * time.Minute,
+	})
+
 	// ---------------------------------------------------------------
 	// Responders & Handlers
 	// ---------------------------------------------------------------
@@ -77,8 +83,8 @@ func main() {
 	htmlResp := response.NewHTML(response.HTMLConfig{})
 
 	demo := handlers.NewDemo(jsonResp)
-	authHandler := handlers.NewAuth(sessionSvc, jsonResp)
-	uiHandler := handlers.NewUI(logger, sessionSvc, store, htmlResp)
+	authHandler := handlers.NewAuth(sessionSvc, jsonResp, loginLimiter, clk)
+	uiHandler := handlers.NewUI(logger, sessionSvc, store, htmlResp, loginLimiter, clk)
 	staticHandler := handlers.NewStatic(logger)
 	errHandler := handlers.NewErrors()
 
