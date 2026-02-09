@@ -1,8 +1,16 @@
 @font-face {
-    font-family: "Geist";
-    src: url("/static/fonts/GeistVariable.woff2") format("woff2");
+    font-family: "Inter";
+    src: url("/static/fonts/InterVariable.woff2") format("woff2");
     font-weight: 100 900;
     font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Inter";
+    src: url("/static/fonts/InterVariable-Italic.woff2") format("woff2");
+    font-weight: 100 900;
+    font-style: italic;
     font-display: swap;
 }
 
@@ -12,7 +20,7 @@
 
 @layer base {
     html {
-        font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
+        font-family: "Inter";
     }
 
     body {
