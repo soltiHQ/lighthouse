@@ -95,8 +95,3 @@ func roleAddPerm(t *testing.T, r *model.Role, p kind.Permission) {
 	t.Helper()
 	requireNoErr(t, r.PermissionAdd(p))
 }
-
-func credentialSetSecret(t *testing.T, c *model.Credential, k, v string) {
-	t.Helper()
-	requireNoErr(t, c.SetSecret(k, v))
-}

@@ -1,9 +1,9 @@
 package pages
 
-import "github.com/soltiHQ/control-plane/ui/components"
+import "github.com/soltiHQ/control-plane/ui/layout"
 
 templ Login(redirectURL string, errMsg string) {
-	@components.Blank("Login") {
+	@layout.BlankLayout("Login") {
 		<div class="flex min-h-screen items-center justify-center px-4">
 			<div class="w-full max-w-sm space-y-6">
 				<div class="text-center">
