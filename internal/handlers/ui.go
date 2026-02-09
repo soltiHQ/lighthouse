@@ -22,11 +22,11 @@ type UI struct {
 	html    *response.HTMLResponder
 	limiter *ratelimit.Limiter
 	clock   token.Clock
-	err     *Errors
+	err     *Fault
 }
 
 // NewUI creates a UI handler.
-func NewUI(logger zerolog.Logger, session *session.Service, store storage.Storage, html *response.HTMLResponder, limiter *ratelimit.Limiter, clk token.Clock, err *Errors) *UI {
+func NewUI(logger zerolog.Logger, session *session.Service, store storage.Storage, html *response.HTMLResponder, limiter *ratelimit.Limiter, clk token.Clock, err *Fault) *UI {
 	return &UI{
 		logger:  logger,
 		session: session,
@@ -82,7 +82,7 @@ func (u *UI) LoginSubmit(w http.ResponseWriter, r *http.Request) {
 	key := loginKey(subject, r)
 	now := u.clock.Now()
 	if u.limiter.Blocked(key, now) {
-		u.err.ManyAuthAttempts(w, r)
+		u.err.AuthRateLimit(w, r, RenderPage)
 		return
 	}
 

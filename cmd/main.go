@@ -83,7 +83,7 @@ func main() {
 	htmlResp := response.NewHTML(response.HTMLConfig{})
 
 	demo := handlers.NewDemo(jsonResp)
-	errHandler := handlers.NewErrors()
+	errHandler := handlers.NewFault()
 	authHandler := handlers.NewAuth(sessionSvc, jsonResp, loginLimiter, clk)
 	uiHandler := handlers.NewUI(logger, sessionSvc, store, htmlResp, loginLimiter, clk, errHandler)
 	staticHandler := handlers.NewStatic(logger)
