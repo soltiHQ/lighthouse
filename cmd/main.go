@@ -13,13 +13,14 @@ import (
 	"github.com/soltiHQ/control-plane/domain/model"
 	"github.com/soltiHQ/control-plane/internal/auth/credentials"
 	"github.com/soltiHQ/control-plane/internal/auth/svc"
-	"github.com/soltiHQ/control-plane/internal/auth/token"
+	"github.com/soltiHQ/control-plane/internal/backend"
 	"github.com/soltiHQ/control-plane/internal/handlers"
 	"github.com/soltiHQ/control-plane/internal/server"
 	"github.com/soltiHQ/control-plane/internal/server/runner/httpserver"
 	"github.com/soltiHQ/control-plane/internal/storage/inmemory"
 	"github.com/soltiHQ/control-plane/internal/transport/http/middleware"
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
+	"github.com/soltiHQ/control-plane/internal/transport/http/response"
 )
 
 func main() {
@@ -42,20 +43,21 @@ func main() {
 	// Auth stack
 	// ---------------------------------------------------------------
 	jwtSecret := "dev-secret-change-me-in-production"
-
 	authSVC := svc.NewAuth(store, jwtSecret, 1*time.Minute, 7*24*time.Hour, 1*time.Minute, 2)
-	clk := token.RealClock()
 
 	// ---------------------------------------------------------------
-	// Responders & Handlers
+	// Responders
 	// ---------------------------------------------------------------
 	jsonResp := responder.NewJSON()
 	htmlResp := responder.NewHTML()
 
-	demo := handlers.NewDemo(jsonResp)
-	errHandler := handlers.NewFault()
-	authHandler := handlers.NewAuth(authSVC.Session, jsonResp, authSVC.Limiter, clk)
-	uiHandler := handlers.NewUI(logger, authSVC.Session, htmlResp, authSVC.Limiter, clk, errHandler)
+	// ---------------------------------------------------------------
+	// Backend & Handlers (only UI + Static)
+	// ---------------------------------------------------------------
+	loginUC := backend.NewLogin(authSVC)
+
+	uiHandler := handlers.NewUI(logger, authSVC, loginUC)
+	apiHandler := handlers.NewAPI(logger, authSVC, loginUC)
 	staticHandler := handlers.NewStatic(logger)
 
 	// ---------------------------------------------------------------
@@ -63,17 +65,27 @@ func main() {
 	// ---------------------------------------------------------------
 	mux := http.NewServeMux()
 
-	// Public — no auth.
-	authHandler.Routes(mux) // POST /v1/login
-	uiHandler.Routes(mux)   // GET /login, POST /login
 	staticHandler.Routes(mux)
 
-	// Protected — auth required.
-	authMw := middleware.Auth(authSVC.Verifier, authSVC.Session)
-	mux.Handle("GET /api/hello", authMw(http.HandlerFunc(demo.Hello)))
-	mux.Handle("GET /hello", authMw(http.HandlerFunc(demo.Hello)))
+	// Login (GET/POST)
+	mux.HandleFunc("/login", uiHandler.Login)
+	mux.HandleFunc("/api/v1/login", apiHandler.Login)
 
-	var handler http.Handler = errHandler.Wrap(mux)
+	// Home + 404 fallback
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			// временно: редирект на /login (пока нет главной)
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
+		response.NotFound(w, r, response.RenderPage)
+	}))
+
+	// ---------------------------------------------------------------
+	// Middleware chain (outer → inner)
+	// CORS → RequestID → Logger → Recovery → Negotiate → Router
+	// ---------------------------------------------------------------
+	var handler http.Handler = mux
 	handler = middleware.Negotiate(jsonResp, htmlResp)(handler)
 	handler = middleware.Recovery(logger)(handler)
 	handler = middleware.Logger(logger)(handler)
@@ -81,18 +93,6 @@ func main() {
 	handler = middleware.CORS(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 	})(handler)
-
-	// ---------------------------------------------------------------
-	// Global middleware chain (outer → inner)
-	// CORS → RequestID → Logger → Recovery → Router
-	// ---------------------------------------------------------------
-	//var handler http.Handler = mux
-	//handler = middleware.Recovery(logger)(handler)
-	//handler = middleware.Logger(logger)(handler)
-	//handler = middleware.RequestID()(handler)
-	//handler = middleware.CORS(middleware.CORSConfig{
-	//	AllowOrigins: []string{"*"},
-	//})(handler)
 
 	// ---------------------------------------------------------------
 	// Server

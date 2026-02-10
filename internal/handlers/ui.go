@@ -1,85 +1,51 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 
 	"github.com/rs/zerolog"
-	"github.com/soltiHQ/control-plane/domain/kind"
-	"github.com/soltiHQ/control-plane/internal/auth/ratelimit"
-	"github.com/soltiHQ/control-plane/internal/auth/session"
-	"github.com/soltiHQ/control-plane/internal/auth/token"
+	"github.com/soltiHQ/control-plane/internal/auth"
+	"github.com/soltiHQ/control-plane/internal/auth/svc"
+	"github.com/soltiHQ/control-plane/internal/backend"
 	"github.com/soltiHQ/control-plane/internal/transport/http/cookie"
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
 	"github.com/soltiHQ/control-plane/ui/pages"
 )
 
-// UI handles browser-facing HTML endpoints.
 type UI struct {
-	html    *responder.HTMLResponder
-	limiter *ratelimit.Limiter
-	session *session.Service
-
-	logger zerolog.Logger
-
-	clock token.Clock
-	err   *Fault
+	logger  zerolog.Logger
+	auth    *svc.Auth
+	backend *backend.Login
 }
 
-// NewUI creates a UI handler.
-func NewUI(logger zerolog.Logger, session *session.Service, html *responder.HTMLResponder, limiter *ratelimit.Limiter, clk token.Clock, err *Fault) *UI {
-	return &UI{
-		logger:  logger,
-		session: session,
-		html:    html,
-		limiter: limiter,
-		clock:   clk,
-		err:     err,
-	}
+func NewUI(logger zerolog.Logger, auth *svc.Auth, backend *backend.Login) *UI {
+	return &UI{logger: logger, auth: auth, backend: backend}
 }
 
-// Routes registers UI routes on the given mux.
-// These routes are public — no Auth middleware.
-func (u *UI) Routes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /login", u.LoginPage)
-	mux.HandleFunc("POST /login", u.LoginSubmit)
-
-}
-
-// LoginPage renders the login form.
-func (u *UI) LoginPage(w http.ResponseWriter, r *http.Request) {
-	redirect := r.URL.Query().Get("redirect")
-	if redirect == "" {
-		redirect = "/"
-	}
-
-	subject := r.URL.Query().Get("subject")
-	if subject != "" {
-		key := loginKey(subject, r)
-		if u.limiter.Blocked(key, u.clock.Now()) {
-			//u.html.Respond(w, r, http.StatusTooManyRequests, &responder.View{
-			//	Component: pages.ErrorPage(
-			//		http.StatusTooManyRequests,
-			//		"Too many attempts",
-			//		"Account temporarily locked. Please try again in 10 minutes.",
-			//	),
-			//})
-			return
+func (x *UI) Login(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		redirect := r.URL.Query().Get("redirect")
+		if redirect == "" {
+			redirect = "/"
 		}
+		errMsg := r.URL.Query().Get("error")
+
+		response.OK(w, r, response.RenderPage, &responder.View{
+			Component: pages.Login(redirect, errMsg),
+		})
+		return
 	}
 
-	errMsg := r.URL.Query().Get("error")
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 
-	u.html.Respond(w, r, http.StatusOK, &responder.View{
-		Component: pages.Login(redirect, errMsg),
-	})
-}
-
-// LoginSubmit handles form POST, authenticates, sets cookie, redirects.
-func (u *UI) LoginSubmit(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		//u.html.Error(w, r, http.StatusBadRequest, "invalid form")
+		response.BadRequest(w, r, response.RenderPage)
 		return
 	}
 
@@ -90,34 +56,33 @@ func (u *UI) LoginSubmit(w http.ResponseWriter, r *http.Request) {
 		redirect = "/"
 	}
 
-	if subject == "" || password == "" {
-		http.Redirect(w, r, "/login?error=Username+and+password+required&redirect="+redirect, http.StatusFound)
-		return
-	}
+	key := subject
 
-	key := loginKey(subject, r)
-	now := u.clock.Now()
-	if u.limiter.Blocked(key, now) {
+	_, access, refresh, sessionID, err :=
+		x.backend.Do(r.Context(), subject, password, key)
 
-		response.AuthRateLimit(w, r, response.RenderPage)
-		//u.err.AuthRateLimit(w, r, RenderPage)
-		return
-	}
-
-	pair, id, err := u.session.Login(r.Context(), kind.Password, subject, password)
 	if err != nil {
-		u.limiter.RecordFailure(key, now)
-		u.logger.Warn().
-			Err(err).
-			Str("subject", subject).
-			Msg("login failed")
-
-		http.Redirect(w, r, "/login?error=Invalid+credentials&subject="+url.QueryEscape(subject)+"&redirect="+url.QueryEscape(redirect), http.StatusFound)
-
+		switch {
+		case errors.Is(err, auth.ErrRateLimited):
+			response.AuthRateLimit(w, r, response.RenderPage)
+		case errors.Is(err, auth.ErrInvalidCredentials),
+			errors.Is(err, auth.ErrInvalidRequest):
+			http.Redirect(
+				w, r,
+				"/login?error=Invalid+credentials&redirect="+url.QueryEscape(redirect),
+				http.StatusFound,
+			)
+		default:
+			x.logger.Warn().Err(err).Msg("login failed")
+			http.Redirect(
+				w, r,
+				"/login?error=Login+failed&redirect="+url.QueryEscape(redirect),
+				http.StatusFound,
+			)
+		}
 		return
 	}
 
-	u.limiter.Reset(key)
-	cookie.SetAuth(w, r, pair.AccessToken, pair.RefreshToken, id.SessionID)
+	cookie.SetAuth(w, r, access, refresh, sessionID)
 	http.Redirect(w, r, redirect, http.StatusFound)
 }

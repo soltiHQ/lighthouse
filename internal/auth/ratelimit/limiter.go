@@ -3,6 +3,8 @@ package ratelimit
 import (
 	"sync"
 	"time"
+
+	"github.com/soltiHQ/control-plane/internal/auth"
 )
 
 // Config defines rate limiter parameters.
@@ -35,6 +37,14 @@ func New(cfg Config) *Limiter {
 		entries: make(map[string]*entry),
 		cfg:     cfg,
 	}
+}
+
+// Check returns auth.ErrRateLimited if the key is currently blocked.
+func (l *Limiter) Check(key string, now time.Time) error {
+	if l.Blocked(key, now) {
+		return auth.ErrRateLimited
+	}
+	return nil
 }
 
 // Blocked reports whether the key is currently blocked.

@@ -40,4 +40,7 @@ var (
 	// ErrInvalidRequest indicates that the request payload is malformed,
 	// incomplete, or violates expected input constraints.
 	ErrInvalidRequest = errors.New("auth: invalid request")
+	// ErrRateLimited indicates that the operation is temporarily blocked
+	// due to too many failed attempts for the given key.
+	ErrRateLimited = errors.New("auth: rate limited")
 )
