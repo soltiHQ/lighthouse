@@ -33,9 +33,9 @@
         --muted-strong: 113 113 122;
 
         /* borders */
-        --border: 228 228 231;
-        --border-2: 239 239 241;
-        --input-border: 214 214 219;
+        --border: 203 213 225;
+        --border-2: 226 232 240;
+        --input-border: 148 163 184;
 
         /* brand / accents */
         --primary: 24 24 27;

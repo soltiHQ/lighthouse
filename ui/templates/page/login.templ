@@ -1,6 +1,7 @@
 package pages
 
 import (
+	"github.com/soltiHQ/control-plane/ui/templates/asset"
 	"github.com/soltiHQ/control-plane/ui/templates/component"
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 )
@@ -8,67 +9,73 @@ import (
 templ Login(redirectURL string, errMsg string) {
 	@layout.Root("Login") {
 		<div class="min-h-screen bg-bg text-fg flex items-center justify-center px-4">
-			<div class="w-full max-w-sm space-y-6">
-				<div class="text-center space-y-2">
-					<div class="text-2xl font-bold tracking-tight">
-						Solti
-					</div>
-					<p class="text-sm text-muted">
-						Let's get you signed in
-					</p>
-				</div>
+			<div class="w-full max-w-sm">
+				<div class="text-center space-y-3">
+                	<h1 class="flex items-center justify-center gap-3 text-3xl font-semibold tracking-tight text-fg">
+                		<span class="text-primary [&_svg]:h-10 [&_svg]:w-10">
+                			@asset.Solti()
+                		</span>
+                		<span>Solti</span>
+                	</h1>
 
-				if errMsg != "" {
-					<div
-						class="
-							rounded-[var(--r-6)]
-							border border-danger/40
-							bg-danger/10
-							text-danger
-							px-3 py-2
-							text-sm
-						"
-						role="alert"
-					>
-						{ errMsg }
-					</div>
-				}
+                	<h2 class="text-lg font-medium text-fg/80">
+                		Let's get you signed in
+                	</h2>
+                </div>
 
-				<form method="POST" action="/login" class="space-y-4">
+				<!-- Form (pulled closer to header) -->
+				<form method="POST" action="/login" class="mt-4 space-y-4">
 					<input type="hidden" name="redirect" value={ redirectURL }/>
 
 					@component.Input(
-                        "subject",
-                        "text",
-                        "",
-                        "Username",
-                        true,
-                        true,
-                        "",
-                    )
+						"subject",
+						"text",
+						"",
+						"Username",
+						true,
+						true,
+						"",
+					)
 
 					@component.Input(
-                        "password",
-                        "password",
-                        "",
-                        "Password",
-                        true,
-                        false,
-                        "",
-                    )
-
-					@component.Button(
-						"Sign in",
-						"submit",
+						"password",
+						"password",
+						"",
+						"Password",
 						true,
-						"primary",
 						false,
+						"",
 					)
-				</form>
 
-				<p class="text-xs text-muted text-center">
-					By signing in you agree to the security policy.
-				</p>
+					<div class="space-y-3">
+						@component.Button(
+							"Sign in",
+							"submit",
+							true,
+							"primary",
+							false,
+						)
+
+						<!-- Error under button -->
+						<div class="min-h-[44px]">
+							if errMsg != "" {
+								<div
+									class="
+										rounded-[var(--r-6)]
+										border border-danger/40
+										bg-danger/10
+										text-danger
+										px-3 py-2
+										text-sm
+									"
+									role="alert"
+								>
+									{ errMsg }
+								</div>
+							}
+						</div>
+					</div>
+				</form>
 			</div>
 		</div>
 	}
