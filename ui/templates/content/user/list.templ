@@ -49,21 +49,11 @@ templ Cards(items []*model.User) {
 		</div>
 	} else {
 		for _, u := range items {
-			<div
-				class="
-					rounded-[var(--r-6)]
-					border border-border
-					bg-card
-					p-4
-					space-y-2
-					hover:border-primary/40
-					transition-colors
-				"
-			>
-				<div class="flex items-center justify-between">
-					<div class="text-sm font-semibold text-fg">
+			@component.TCard("") {
+				@component.TCardHeader() {
+					@component.TCardTitle() {
 						{ u.Subject() }
-					</div>
+					}
 
 					if u.Disabled() {
 						<span class="inline-flex items-center rounded-full bg-danger/10 text-danger px-2 py-1 text-xs">
@@ -74,11 +64,13 @@ templ Cards(items []*model.User) {
 							Active
 						</span>
 					}
-				</div>
+				}
 
-				<div class="text-sm text-muted-strong">{ u.Name() }</div>
-				<div class="text-xs text-muted">{ u.Email() }</div>
-			</div>
+				@component.TCardBody() {
+					<div class="text-sm text-muted-strong">{ u.Name() }</div>
+					<div class="text-xs text-muted">{ u.Email() }</div>
+				}
+			}
 		}
 	}
 }

@@ -1,0 +1,52 @@
+package component
+
+templ TCard(href string) {
+	if href != "" {
+		<a
+			href={ href }
+			class="
+				block
+				rounded-[var(--r-6)]
+				border border-border
+				bg-card
+				p-4
+				space-y-2
+				transition-colors
+				hover:border-primary/40
+				cursor-pointer
+			"
+		>
+			{ children... }
+		</a>
+	} else {
+		<div
+			class="
+				rounded-[var(--r-6)]
+				border border-border
+				bg-card
+				p-4
+				space-y-2
+			"
+		>
+			{ children... }
+		</div>
+	}
+}
+
+templ TCardHeader() {
+	<div class="flex items-center justify-between">
+		{ children... }
+	</div>
+}
+
+templ TCardTitle() {
+	<div class="text-sm font-semibold text-fg">
+		{ children... }
+	</div>
+}
+
+templ TCardBody() {
+	<div class="space-y-1">
+		{ children... }
+	</div>
+}

@@ -27,9 +27,15 @@ templ Search(
 				bg-card text-fg
 				border border-input
 				placeholder:text-muted-strong
-				outline-none transition-colors
+
+				shadow-[var(--shadow)]
+				transition
 				hover:border-border
-				focus:ring-2 focus:ring-primary/25 focus:border-primary
+				hover:shadow-[var(--shadow)]
+
+				focus:outline-none
+				focus:border-primary/60
+				focus:shadow-[var(--shadow-focus)]
 			"
 			hx-get={ endpoint }
 			hx-trigger="input changed delay:300ms, search"

@@ -43,10 +43,19 @@ templ VBarLogo() {
 			flex items-center justify-center
 			h-14 w-14
 			rounded-2xl
-			bg-primary/10
+
+			bg-card
 			text-primary
-			hover:bg-primary/20
-			transition-colors
+
+			border border-border
+
+			shadow-sm
+			transition-all duration-200
+
+			hover:border-primary/40
+			hover:shadow-md
+
+			active:shadow-sm
 		"
 		title="Home"
 	>
@@ -63,8 +72,12 @@ templ VBarItem(id string, href string, label string, active string) {
 			class="
 				flex items-center justify-center
 				h-12 w-12 rounded-xl
+
 				bg-nav-bg
 				text-icon-active
+
+				border border-border
+				shadow-sm
 			"
 			title={ label }
 		>
