@@ -1,10 +1,13 @@
 package layout
 
-import "github.com/soltiHQ/control-plane/ui/templates/component"
+import (
+    "github.com/soltiHQ/control-plane/internal/backend"
+    "github.com/soltiHQ/control-plane/ui/templates/component"
+)
 
-templ App(title string, active string) {
+templ App(title string, active string, nav backend.Nav) {
 	@Root(title) {
-		@component.VBar(active)
+		@component.VBar(active, nav)
 
 		<div
 			class="

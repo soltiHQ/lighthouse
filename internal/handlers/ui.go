@@ -13,6 +13,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/transport/http/cookie"
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
+	"github.com/soltiHQ/control-plane/internal/transportctx"
 	content "github.com/soltiHQ/control-plane/ui/templates/content/user"
 	my "github.com/soltiHQ/control-plane/ui/templates/page"
 )
@@ -48,9 +49,11 @@ func (x *UI) Main(w http.ResponseWriter, r *http.Request) {
 		response.NotFound(w, r, response.RenderPage)
 		return
 	}
+	id, _ := transportctx.Identity(r.Context())
+	nav := backend.BuildNav(id)
 
 	response.OK(w, r, response.RenderPage, &responder.View{
-		Component: my.Main(),
+		Component: my.Main(nav),
 	})
 }
 
@@ -173,9 +176,11 @@ func (x *UI) Users(w http.ResponseWriter, r *http.Request) {
 		response.NotFound(w, r, response.RenderPage)
 		return
 	}
+	id, _ := transportctx.Identity(r.Context())
+	nav := backend.BuildNav(id)
 
 	response.OK(w, r, response.RenderPage, &responder.View{
-		Component: my.Users(),
+		Component: my.Users(nav),
 	})
 }
 
