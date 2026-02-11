@@ -16,15 +16,21 @@ templ Root(title string) {
 
 		<script>
 			(function() {
+				function getCookie(name) {
+					var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+					if (match) return match[2];
+					return null;
+				}
+
 				try {
-					var stored = localStorage.getItem("theme");
-					var prefersDark =
-						window.matchMedia &&
-						window.matchMedia("(prefers-color-scheme: dark)").matches;
-					var isDark = (stored === "dark") || (!stored && prefersDark);
+					var theme = getCookie("theme");
 					var root = document.documentElement;
-					if (isDark) root.classList.add("dark");
-					else root.classList.remove("dark");
+
+					if (theme === "dark") {
+						root.classList.add("dark");
+					} else {
+						root.classList.remove("dark");
+					}
 				} catch (e) {}
 			})();
 		</script>
@@ -34,11 +40,18 @@ templ Root(title string) {
 				window.__setTheme = function(mode) {
 					try {
 						var root = document.documentElement;
-						if (mode === "dark") root.classList.add("dark");
-						else root.classList.remove("dark");
-						localStorage.setItem("theme", mode);
+
+						if (mode === "dark") {
+							root.classList.add("dark");
+						} else {
+							root.classList.remove("dark");
+							mode = "light";
+						}
+
+						document.cookie = "theme=" + mode + "; path=/; max-age=31536000";
 					} catch (e) {}
 				};
+
 				window.__toggleTheme = function() {
 					try {
 						var root = document.documentElement;
