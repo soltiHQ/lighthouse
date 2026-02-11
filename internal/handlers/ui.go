@@ -207,7 +207,7 @@ func (x *UI) UsersList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.OK(w, r, response.RenderBlock, &responder.View{
-		Component: content.List(res.Items, res.NextCursor, q),
+		Component: content.List(res.Items, res.NextCursor, q, res.Total),
 	})
 }
 

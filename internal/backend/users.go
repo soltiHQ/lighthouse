@@ -10,6 +10,7 @@ import (
 type UsersListResult struct {
 	Items      []*model.User
 	NextCursor string
+	Total      int
 }
 
 type Users struct {
@@ -36,5 +37,6 @@ func (x *Users) List(ctx context.Context, limit int, cursor string, filter stora
 	return &UsersListResult{
 		Items:      res.Items,
 		NextCursor: res.NextCursor,
+		Total:      len(res.Items),
 	}, nil
 }

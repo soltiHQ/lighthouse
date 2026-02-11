@@ -2,50 +2,40 @@ package user
 
 import "github.com/soltiHQ/control-plane/domain/model"
 
-templ List(items []*model.User, nextCursor string, q string) {
+templ List(items []*model.User, nextCursor string, q string, total int) {
 	<div class="space-y-4">
 		<div class="flex items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
-			<div class="text-sm text-muted">
-				Users: <span class="text-fg font-medium">{ len(items) }</span>
-			</div>
-
 			<div class="w-[320px] max-sm:w-full">
 				<input
-                	id="users-search"
-                	type="search"
-                	name="q"
-                	value={ q }
-                	placeholder="Search users…"
-                	class="
-                		block w-full h-10 px-4
-                		rounded-[var(--r-6)]
-                		bg-card text-fg
-                		border border-input
-                		placeholder:text-muted-strong
-                		outline-none transition-colors
-                		hover:border-border
-                		focus:ring-2 focus:ring-primary/25 focus:border-primary
-                	"
-                	hx-get="/users/list"
-                	hx-trigger="input changed delay:300ms, search"
-                	hx-target="#users-results"
-                	hx-select="#users-results"
-                	hx-swap="outerHTML"
-                	hx-preserve="true"
-                />
+					id="users-search"
+					type="search"
+					name="q"
+					value={ q }
+					placeholder="Search users…"
+					class="block w-full h-10 px-4 rounded-[var(--r-6)] bg-card text-fg border border-input placeholder:text-muted-strong outline-none transition-colors hover:border-border focus:ring-2 focus:ring-primary/25 focus:border-primary"
+					hx-get="/users/list"
+					hx-trigger="input changed delay:300ms, search"
+					hx-target="#users-results"
+					hx-select="#users-results"
+					hx-swap="outerHTML"
+					hx-preserve="true"
+				/>
 			</div>
 		</div>
 
-		@Results(items, nextCursor, q)
+		@Results(items, nextCursor, q, total)
 	</div>
 }
 
-templ Results(items []*model.User, nextCursor string, q string) {
+templ Results(items []*model.User, nextCursor string, q string, total int) {
 	<div id="users-results" class="space-y-4">
-		<div
-			id="users-cards"
-			class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-		>
+		<div class="flex items-center justify-between">
+			<div class="text-sm text-muted">
+				Users: <span class="text-fg font-medium">{ total }</span>
+			</div>
+		</div>
+
+		<div id="users-cards" class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
 			@Cards(items)
 		</div>
 
