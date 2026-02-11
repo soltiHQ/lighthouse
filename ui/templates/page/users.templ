@@ -1,17 +1,22 @@
 package pages
 
 import (
-    "github.com/soltiHQ/control-plane/internal/backend"
-    "github.com/soltiHQ/control-plane/ui/templates/layout"
+	"github.com/soltiHQ/control-plane/internal/backend"
+	"github.com/soltiHQ/control-plane/ui/templates/layout"
+	"github.com/soltiHQ/control-plane/ui/templates/component"
 )
 
 templ Users(nav backend.Nav) {
 	@layout.App("Users", "users", nav) {
 		<div class="space-y-6">
-			<div>
+			<div class="flex items-center justify-between">
 				<h1 class="text-2xl font-bold text-fg">
 					Users management
 				</h1>
+
+				if nav.CanAddUser {
+					@component.AButton("Add user", "/users/new", false, "primary")
+				}
 			</div>
 
 			<div

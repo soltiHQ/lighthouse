@@ -9,6 +9,7 @@ type Nav struct {
 	ShowAgents bool
 	ShowUsers  bool
 	ShowTasks  bool
+	CanAddUser bool
 }
 
 func BuildNav(id *identity.Identity) Nav {
@@ -19,7 +20,8 @@ func BuildNav(id *identity.Identity) Nav {
 	return Nav{
 		ShowAgents: hasAnySlice(id.Permissions, kind.AgentsGet, kind.AgentsEdit),
 		ShowUsers:  hasAnySlice(id.Permissions, kind.UsersGet, kind.UsersAdd, kind.UsersEdit, kind.UsersDelete),
-		ShowTasks:  true, // пока заглушка
+		ShowTasks:  true,
+		CanAddUser: hasAnySlice(id.Permissions, kind.UsersAdd),
 	}
 }
 

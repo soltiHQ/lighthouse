@@ -1,0 +1,98 @@
+package component
+
+templ AButton(
+	label string,
+	href string,
+	fullWidth bool,
+	variant string,
+) {
+	if fullWidth {
+		@aButtonInner(label, href, "w-full", variant)
+	} else {
+		@aButtonInner(label, href, "", variant)
+	}
+}
+
+templ aButtonInner(label string, href string, widthClass string, variant string) {
+	if variant == "primary" {
+		<a
+			href={ href }
+			class={
+				"inline-flex items-center justify-center gap-2 " +
+					"h-10 px-4 " +
+					"rounded-[var(--r-6)] " +
+					"bg-primary text-white " +
+					"hover:bg-primary/90 " +
+					"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 " +
+					"transition-colors " +
+					widthClass
+			}
+		>
+			{ label }
+		</a>
+	} else if variant == "secondary" {
+		<a
+			href={ href }
+			class={
+				"inline-flex items-center justify-center gap-2 " +
+					"h-10 px-4 " +
+					"rounded-[var(--r-6)] " +
+					"bg-card text-fg border border-border " +
+					"hover:bg-nav-bg " +
+					"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 " +
+					"transition-colors " +
+					widthClass
+			}
+		>
+			{ label }
+		</a>
+	} else if variant == "ghost" {
+		<a
+			href={ href }
+			class={
+				"inline-flex items-center justify-center gap-2 " +
+					"h-10 px-4 " +
+					"rounded-[var(--r-6)] " +
+					"bg-transparent text-fg " +
+					"hover:bg-nav-bg " +
+					"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 " +
+					"transition-colors " +
+					widthClass
+			}
+		>
+			{ label }
+		</a>
+	} else if variant == "danger" {
+		<a
+			href={ href }
+			class={
+				"inline-flex items-center justify-center gap-2 " +
+					"h-10 px-4 " +
+					"rounded-[var(--r-6)] " +
+					"bg-danger text-white " +
+					"hover:bg-danger/90 " +
+					"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40 " +
+					"transition-colors " +
+					widthClass
+			}
+		>
+			{ label }
+		</a>
+	} else {
+		<a
+			href={ href }
+			class={
+				"inline-flex items-center justify-center gap-2 " +
+					"h-10 px-4 " +
+					"rounded-[var(--r-6)] " +
+					"bg-card text-fg border border-border " +
+					"hover:bg-nav-bg " +
+					"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 " +
+					"transition-colors " +
+					widthClass
+			}
+		>
+			{ label }
+		</a>
+	}
+}
