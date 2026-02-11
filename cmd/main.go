@@ -84,6 +84,7 @@ func main() {
 	authMw := middleware.Auth(authSVC.Verifier, authSVC.Session)
 	mux.Handle("/", authMw(http.HandlerFunc(uiHandler.Main)))
 	mux.Handle("/agents", authMw(http.HandlerFunc(uiHandler.Agents)))
+	mux.HandleFunc("/test", uiHandler.Test)
 
 	// Middleware chain (outer -> inner)
 	var handler http.Handler = mux

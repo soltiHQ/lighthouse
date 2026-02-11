@@ -15,6 +15,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
 	"github.com/soltiHQ/control-plane/ui/blocks"
 	"github.com/soltiHQ/control-plane/ui/pages"
+	my "github.com/soltiHQ/control-plane/ui/templates/page"
 )
 
 // UI serves browser-facing HTML endpoints (and HTMX blocks).
@@ -137,5 +138,22 @@ func (x *UI) Agents(w http.ResponseWriter, r *http.Request) {
 
 	response.OK(w, r, response.RenderBlock, &responder.View{
 		Component: blocks.Agents(res.Items),
+	})
+}
+
+// Test renders GET /test
+func (x *UI) Test(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	if r.URL.Path != "/test" {
+		response.NotFound(w, r, response.RenderPage)
+		return
+	}
+
+	response.OK(w, r, response.RenderPage, &responder.View{
+		Component: my.Main(),
 	})
 }
