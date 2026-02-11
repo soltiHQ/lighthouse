@@ -78,6 +78,7 @@ func main() {
 
 	// Public
 	mux.HandleFunc("/login", uiHandler.Login)
+	mux.HandleFunc("/logout", uiHandler.Logout)
 	mux.HandleFunc("/api/v1/login", apiHandler.Login)
 
 	// Protected

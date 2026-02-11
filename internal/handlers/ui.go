@@ -117,6 +117,25 @@ func (x *UI) Login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirect, http.StatusFound)
 }
 
+// Logout handles POST/GET /logout
+func (x *UI) Logout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if r.URL.Path != "/logout" {
+		response.NotFound(w, r, response.RenderPage)
+		return
+	}
+
+	if c, err := cookie.GetSessionID(r); err == nil && c != nil && c.Value != "" {
+		_ = x.auth.Session.Revoke(r.Context(), c.Value)
+	}
+
+	cookie.DeleteAuth(w, r)
+	http.Redirect(w, r, "/login", http.StatusFound)
+}
+
 // Agents renders GET /agents (HTMX block).
 func (x *UI) Agents(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
