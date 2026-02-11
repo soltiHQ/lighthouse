@@ -6,7 +6,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
 	"github.com/soltiHQ/control-plane/internal/transport/httpctx"
 	"github.com/soltiHQ/control-plane/internal/transportctx"
-	"github.com/soltiHQ/control-plane/ui/pages"
+	"github.com/soltiHQ/control-plane/ui/templates/page"
 
 	"github.com/a-h/templ"
 )
