@@ -1,11 +1,11 @@
 package user
 
 import (
-    "github.com/soltiHQ/control-plane/domain/model"
-    "github.com/soltiHQ/control-plane/ui/templates/component"
+	"github.com/soltiHQ/control-plane/domain/model"
+	"github.com/soltiHQ/control-plane/ui/templates/component"
 )
 
-templ List(items []*model.User, nextCursor string, q string, total int) {
+templ List(items []*model.User, nextCursor string, q string) {
 	<div class="space-y-4">
 		<div class="flex items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
 			<div class="w-[320px] max-sm:w-full">
@@ -13,29 +13,23 @@ templ List(items []*model.User, nextCursor string, q string, total int) {
 					"users-search",
 					"q",
 					q,
-					"Search users…",
+					"Search…",
 					"/users/list",
 					"#users-results",
 				)
 			</div>
 		</div>
 
-		@Results(items, nextCursor, q, total)
+		@Results(items, nextCursor, q)
 	</div>
 }
 
-templ Results(items []*model.User, nextCursor string, q string, total int) {
+templ Results(items []*model.User, nextCursor string, q string) {
 	<div id="users-results" class="space-y-4">
-		<div class="flex items-center justify-between">
-			<div class="text-sm text-muted">
-				Users: <span class="text-fg font-medium">{ total }</span>
-			</div>
-		</div>
-
 		<div id="users-cards" class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
 			@Cards(items)
 		</div>
-
+		
 		<div id="users-footer">
 			@Footer(nextCursor, q)
 		</div>
@@ -76,27 +70,16 @@ templ Cards(items []*model.User) {
 }
 
 templ Footer(nextCursor string, q string) {
-	if nextCursor == "" {
-		<div class="text-xs text-muted text-center py-2">End.</div>
-	} else {
-		<div class="flex justify-center">
-			<button
-				type="button"
-				class="
-					inline-flex items-center justify-center
-					h-10 px-4
-					rounded-[var(--r-6)]
-					bg-primary text-bg
-					hover:opacity-90
-					transition
-				"
-				hx-get={ "/users/list/rows?cursor=" + nextCursor + "&q=" + q }
-				hx-target="#users-cards"
-				hx-swap="beforeend"
-			>
-				Load more
-			</button>
-		</div>
+	if nextCursor != "" {
+		<div
+			id="users-sentinel"
+			class="h-6"
+			hx-get={ "/users/list/rows?cursor=" + nextCursor + "&q=" + q }
+			hx-trigger="revealed"
+			hx-target="#users-cards"
+			hx-swap="beforeend"
+			hx-sync="#users-sentinel:replace"
+		></div>
 	}
 }
 
