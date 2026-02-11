@@ -8,6 +8,8 @@ import (
 	"github.com/soltiHQ/control-plane/internal/auth"
 	"github.com/soltiHQ/control-plane/internal/auth/svc"
 	"github.com/soltiHQ/control-plane/internal/backend"
+	"github.com/soltiHQ/control-plane/internal/storage"
+	"github.com/soltiHQ/control-plane/internal/storage/inmemory"
 	"github.com/soltiHQ/control-plane/internal/transport/http/cookie"
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
@@ -190,8 +192,14 @@ func (x *UI) UsersList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cursor := r.URL.Query().Get("cursor")
+	q := r.URL.Query().Get("q")
 
-	res, err := x.usersUC.List(r.Context(), 5, cursor)
+	var filter storage.UserFilter
+	if q != "" {
+		filter = inmemory.NewUserFilter().Query(q)
+	}
+
+	res, err := x.usersUC.List(r.Context(), 5, cursor, filter)
 	if err != nil {
 		x.logger.Error().Err(err).Msg("list users failed")
 		response.Unavailable(w, r, response.RenderBlock)
@@ -199,7 +207,7 @@ func (x *UI) UsersList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.OK(w, r, response.RenderBlock, &responder.View{
-		Component: content.List(res.Items, res.NextCursor),
+		Component: content.List(res.Items, res.NextCursor, q),
 	})
 }
 
@@ -215,8 +223,14 @@ func (x *UI) UsersListRows(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cursor := r.URL.Query().Get("cursor")
+	q := r.URL.Query().Get("q")
 
-	res, err := x.usersUC.List(r.Context(), 5, cursor)
+	var filter storage.UserFilter
+	if q != "" {
+		filter = inmemory.NewUserFilter().Query(q)
+	}
+
+	res, err := x.usersUC.List(r.Context(), 5, cursor, filter)
 	if err != nil {
 		x.logger.Error().Err(err).Msg("list users failed")
 		response.Unavailable(w, r, response.RenderBlock)
@@ -224,6 +238,6 @@ func (x *UI) UsersListRows(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.OK(w, r, response.RenderBlock, &responder.View{
-		Component: content.RowsResponse(res.Items, res.NextCursor),
+		Component: content.RowsResponse(res.Items, res.NextCursor, q),
 	})
 }

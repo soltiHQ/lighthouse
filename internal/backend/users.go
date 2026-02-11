@@ -20,19 +20,15 @@ func NewUsers(store storage.UserStore) *Users {
 	return &Users{store: store}
 }
 
-func (u *Users) List(ctx context.Context, limit int, cursor string) (*UsersListResult, error) {
+func (x *Users) List(ctx context.Context, limit int, cursor string, filter storage.UserFilter) (*UsersListResult, error) {
 	if limit <= 0 {
 		limit = 5
 	}
 
-	res, err := u.store.ListUsers(
-		ctx,
-		nil,
-		storage.ListOptions{
-			Limit:  limit,
-			Cursor: cursor,
-		},
-	)
+	res, err := x.store.ListUsers(ctx, filter, storage.ListOptions{
+		Limit:  limit,
+		Cursor: cursor,
+	})
 	if err != nil {
 		return nil, err
 	}

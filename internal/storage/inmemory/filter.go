@@ -1,6 +1,8 @@
 package inmemory
 
 import (
+	"strings"
+
 	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/domain/model"
 )
@@ -100,6 +102,30 @@ func (f *UserFilter) Matches(u *model.User) bool {
 		}
 	}
 	return true
+}
+
+// Query matches users by subject/name/email (case-insensitive substring).
+func (f *UserFilter) Query(q string) *UserFilter {
+	q = strings.ToLower(strings.TrimSpace(q))
+	if q == "" {
+		return f
+	}
+	f.predicates = append(f.predicates, func(u *model.User) bool {
+		if u == nil {
+			return false
+		}
+		if strings.Contains(strings.ToLower(u.Subject()), q) {
+			return true
+		}
+		if strings.Contains(strings.ToLower(u.Name()), q) {
+			return true
+		}
+		if strings.Contains(strings.ToLower(u.Email()), q) {
+			return true
+		}
+		return false
+	})
+	return f
 }
 
 // RoleFilter provides predicate-based filtering for in-memory role queries.

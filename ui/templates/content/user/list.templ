@@ -2,89 +2,101 @@ package user
 
 import "github.com/soltiHQ/control-plane/domain/model"
 
-templ List(items []*model.User, nextCursor string) {
+templ List(items []*model.User, nextCursor string, q string) {
 	<div class="space-y-4">
-		<div class="flex items-center justify-between">
+		<div class="flex items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
 			<div class="text-sm text-muted">
 				Users: <span class="text-fg font-medium">{ len(items) }</span>
 			</div>
-			<!-- позже: Search / Create -->
+
+			<div class="w-[320px] max-sm:w-full">
+				<input
+                	id="users-search"
+                	type="search"
+                	name="q"
+                	value={ q }
+                	placeholder="Search users…"
+                	class="
+                		block w-full h-10 px-4
+                		rounded-[var(--r-6)]
+                		bg-card text-fg
+                		border border-input
+                		placeholder:text-muted-strong
+                		outline-none transition-colors
+                		hover:border-border
+                		focus:ring-2 focus:ring-primary/25 focus:border-primary
+                	"
+                	hx-get="/users/list"
+                	hx-trigger="input changed delay:300ms, search"
+                	hx-target="#users-results"
+                	hx-select="#users-results"
+                	hx-swap="outerHTML"
+                	hx-preserve="true"
+                />
+			</div>
 		</div>
 
-		<!-- Cards grid -->
+		@Results(items, nextCursor, q)
+	</div>
+}
+
+templ Results(items []*model.User, nextCursor string, q string) {
+	<div id="users-results" class="space-y-4">
 		<div
-			id="users-rows"
-			class="
-				grid gap-3
-				grid-cols-1
-				sm:grid-cols-2
-				lg:grid-cols-3
-			"
+			id="users-cards"
+			class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
 		>
 			@Cards(items)
 		</div>
 
 		<div id="users-footer">
-			@Footer(nextCursor)
+			@Footer(nextCursor, q)
 		</div>
 	</div>
 }
 
 templ Cards(items []*model.User) {
 	if len(items) == 0 {
-		<div class="rounded-6 border border-border bg-card p-4 text-sm text-muted">
-			No users.
+		<div class="col-span-full text-center text-muted py-10">
+			No users found.
 		</div>
 	} else {
 		for _, u := range items {
 			<div
 				class="
-					rounded-6 border border-border bg-card
+					rounded-[var(--r-6)]
+					border border-border
+					bg-card
 					p-4
-					hover:border-border/80
+					space-y-2
+					hover:border-primary/40
 					transition-colors
 				"
 			>
-				<div class="flex items-start justify-between gap-3">
-					<div class="min-w-0">
-						<div class="text-fg font-semibold truncate">
-							{ u.Subject() }
-						</div>
-						<div class="text-sm text-muted truncate">
-							{ u.Name() }
-						</div>
+				<div class="flex items-center justify-between">
+					<div class="text-sm font-semibold text-fg">
+						{ u.Subject() }
 					</div>
 
-					<div class="shrink-0">
-						if u.Disabled() {
-							<span class="inline-flex items-center rounded-full bg-danger/10 text-danger px-2 py-1 text-xs">
-								Disabled
-							</span>
-						} else {
-							<span class="inline-flex items-center rounded-full bg-success/10 text-success px-2 py-1 text-xs">
-								Active
-							</span>
-						}
-					</div>
+					if u.Disabled() {
+						<span class="inline-flex items-center rounded-full bg-danger/10 text-danger px-2 py-1 text-xs">
+							Disabled
+						</span>
+					} else {
+						<span class="inline-flex items-center rounded-full bg-success/10 text-success px-2 py-1 text-xs">
+							Active
+						</span>
+					}
 				</div>
 
-				<div class="mt-3 text-sm text-muted-strong truncate">
-					{ u.Email() }
-				</div>
-
-				<!-- later: actions row -->
-				<!--
-				<div class="mt-4 flex gap-2">
-					<button ...>Edit</button>
-					<button ...>Disable</button>
-				</div>
-				-->
+				<div class="text-sm text-muted-strong">{ u.Name() }</div>
+				<div class="text-xs text-muted">{ u.Email() }</div>
 			</div>
 		}
 	}
 }
 
-templ Footer(nextCursor string) {
+templ Footer(nextCursor string, q string) {
 	if nextCursor == "" {
 		<div class="text-xs text-muted text-center py-2">End.</div>
 	} else {
@@ -93,12 +105,14 @@ templ Footer(nextCursor string) {
 				type="button"
 				class="
 					inline-flex items-center justify-center
-					h-10 px-4 rounded-[var(--r-6)]
+					h-10 px-4
+					rounded-[var(--r-6)]
 					bg-primary text-bg
-					hover:opacity-90 transition
+					hover:opacity-90
+					transition
 				"
-				hx-get={ "/users/list/rows?cursor=" + nextCursor }
-				hx-target="#users-rows"
+				hx-get={ "/users/list/rows?cursor=" + nextCursor + "&q=" + q }
+				hx-target="#users-cards"
 				hx-swap="beforeend"
 			>
 				Load more
@@ -107,15 +121,10 @@ templ Footer(nextCursor string) {
 	}
 }
 
-/*
-RowsResponse:
-- добавляет cards в #users-rows (swap=beforeend)
-- и OOB обновляет футер (чтобы nextCursor сменился)
-*/
-templ RowsResponse(items []*model.User, nextCursor string) {
+templ RowsResponse(items []*model.User, nextCursor string, q string) {
 	@Cards(items)
 
 	<div id="users-footer" hx-swap-oob="true">
-		@Footer(nextCursor)
+		@Footer(nextCursor, q)
 	</div>
 }
