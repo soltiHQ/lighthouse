@@ -55,6 +55,7 @@ func main() {
 
 	// Backend
 	loginUC := backend.NewLogin(authSVC)
+	usersUC := backend.NewUsers(store)
 
 	// Discovery backend (важно: не store напрямую, а UC)
 	// Если у тебя конструктор называется иначе — меняешь только эту строку.
@@ -62,7 +63,7 @@ func main() {
 	agentsUC := backend.NewAgents(store)
 
 	// Handlers
-	uiHandler := handlers.NewUI(logger, authSVC, loginUC, agentsUC)
+	uiHandler := handlers.NewUI(logger, authSVC, loginUC, agentsUC, usersUC)
 	apiHandler := handlers.NewAPI(logger, authSVC, loginUC)
 	staticHandler := handlers.NewStatic(logger)
 
@@ -84,6 +85,8 @@ func main() {
 	// Protected
 	authMw := middleware.Auth(authSVC.Verifier, authSVC.Session)
 	mux.Handle("/", authMw(http.HandlerFunc(uiHandler.Main)))
+	mux.Handle("/users", authMw(http.HandlerFunc(uiHandler.Users)))
+	mux.Handle("/users/list", authMw(http.HandlerFunc(uiHandler.UsersList)))
 	//mux.Handle("/agents", authMw(http.HandlerFunc(uiHandler.Agents)))
 
 	// Middleware chain (outer -> inner)

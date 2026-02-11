@@ -11,6 +11,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/transport/http/cookie"
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
+	content "github.com/soltiHQ/control-plane/ui/templates/content/user"
 	my "github.com/soltiHQ/control-plane/ui/templates/page"
 )
 
@@ -21,14 +22,16 @@ type UI struct {
 
 	loginUC  *backend.Login
 	agentsUC *backend.Agents
+	usersUC  *backend.Users
 }
 
-func NewUI(logger zerolog.Logger, auth *svc.Auth, loginUC *backend.Login, agentsUC *backend.Agents) *UI {
+func NewUI(logger zerolog.Logger, auth *svc.Auth, loginUC *backend.Login, agentsUC *backend.Agents, usersUC *backend.Users) *UI {
 	return &UI{
 		logger:   logger,
 		auth:     auth,
 		loginUC:  loginUC,
 		agentsUC: agentsUC,
+		usersUC:  usersUC,
 	}
 }
 
@@ -156,3 +159,43 @@ func (x *UI) Logout(w http.ResponseWriter, r *http.Request) {
 //		Component: blocks.Agents(res.Items),
 //	})
 //}
+
+// Users renders GET /users
+func (x *UI) Users(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	if r.URL.Path != "/users" {
+		response.NotFound(w, r, response.RenderPage)
+		return
+	}
+
+	response.OK(w, r, response.RenderPage, &responder.View{
+		Component: my.Users(),
+	})
+}
+
+// UsersList renders GET /user-list
+func (x *UI) UsersList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if r.URL.Path != "/users/list" {
+		response.NotFound(w, r, response.RenderBlock)
+		return
+	}
+
+	res, err := x.usersUC.List(r.Context(), 100, "")
+	if err != nil {
+		x.logger.Error().Err(err).Msg("list users failed")
+		response.Unavailable(w, r, response.RenderBlock)
+		return
+	}
+
+	response.OK(w, r, response.RenderBlock, &responder.View{
+		Component: content.UserList(res.Items),
+	})
+}
