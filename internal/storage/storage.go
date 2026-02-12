@@ -222,6 +222,17 @@ type VerifierStore interface {
 	//   - ErrInternal for unexpected storage failures.
 	GetVerifierByCredential(ctx context.Context, credentialID string) (*model.Verifier, error)
 
+	// DeleteVerifierByCredential removes verifier for a given credential.
+	//
+	// Semantics:
+	//   - Idempotent: deleting a missing verifier is a no-op.
+	//
+	// Returns:
+	//   - ErrInvalidArgument if credentialID is empty.
+	//   - ErrUnavailable if the backend is temporarily unavailable.
+	//   - ErrInternal for unexpected storage failures.
+	DeleteVerifierByCredential(ctx context.Context, credentialID string) error
+
 	// DeleteVerifier removes a verifier by its unique identifier.
 	//
 	// Returns:
@@ -250,6 +261,14 @@ type SessionStore interface {
 	//   - ErrInternal for unexpected storage failures.
 	GetSession(ctx context.Context, id string) (*model.Session, error)
 
+	// ListSessionsByUser retrieves all sessions for a specific user.
+	//
+	// Returns:
+	//   - ErrInvalidArgument if userID is empty.
+	//   - ErrUnavailable if the backend is temporarily unavailable.
+	//   - ErrInternal for unexpected storage failures.
+	ListSessionsByUser(ctx context.Context, userID string) ([]*model.Session, error)
+
 	// RotateRefresh updates the refresh token hash and expiry for the given session.
 	//
 	// This is used for refresh token rotation.
@@ -275,6 +294,16 @@ type SessionStore interface {
 	//   - ErrInvalidArgument if the ID is empty.
 	//   - ErrInternal for unexpected storage failures.
 	DeleteSession(ctx context.Context, id string) error
+
+	// DeleteSessionsByUser removes all sessions for a user.
+	//
+	// Idempotent: if the user has no sessions, the operation is a no-op.
+	//
+	// Returns:
+	//   - ErrInvalidArgument if userID is empty.
+	//   - ErrUnavailable if the backend is temporarily unavailable.
+	//   - ErrInternal for unexpected storage failures.
+	DeleteSessionsByUser(ctx context.Context, userID string) error
 }
 
 // RoleStore defines persistence operations for role entities.

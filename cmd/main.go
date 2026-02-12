@@ -174,7 +174,6 @@ func main() {
 	logger.Info().Msg("server stopped")
 }
 
-// bootstrap seeds an admin user with all permissions.
 func bootstrap(ctx context.Context, store *inmemory.Store) error {
 	// ---------------------------------------------------
 	// ROLES
@@ -326,16 +325,31 @@ func bootstrap(ctx context.Context, store *inmemory.Store) error {
 			return err
 		}
 
-		cred, err := credentials.NewPasswordCredential(
-			"cred-"+u.ID,
-			u.ID,
-			u.Password,
-			0,
-		)
+		// ---------------------------------------------------
+		// CREDENTIAL + VERIFIER (password)
+		// ---------------------------------------------------
+
+		credID := "cred-" + u.ID
+		verID := "ver-" + u.ID
+
+		cred, err := model.NewCredential(credID, u.ID, kind.Password)
 		if err != nil {
 			return err
 		}
 		if err := store.UpsertCredential(ctx, cred); err != nil {
+			return err
+		}
+
+		ver, err := credentials.NewPasswordVerifier(
+			verID,
+			credID,
+			u.Password,
+			0, // cost (0 => default)
+		)
+		if err != nil {
+			return err
+		}
+		if err := store.UpsertVerifier(ctx, ver); err != nil {
 			return err
 		}
 	}

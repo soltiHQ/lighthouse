@@ -40,6 +40,9 @@ func NewVerifier(id, credentialID string, auth kind.Auth) (*Verifier, error) {
 	if credentialID == "" {
 		return nil, domain.ErrFieldEmpty
 	}
+	if auth == "" {
+		return nil, domain.ErrFieldEmpty
+	}
 
 	now := time.Now()
 	return &Verifier{
@@ -83,9 +86,16 @@ func (v *Verifier) DataAll() map[string]string {
 }
 
 // DataSet sets a verifier data value and updates UpdatedAt.
-func (v *Verifier) DataSet(key, value string) {
+func (v *Verifier) DataSet(key, value string) error {
+	if key == "" || value == "" {
+		return domain.ErrFieldEmpty
+	}
+	if v.data == nil {
+		v.data = make(map[string]string)
+	}
 	v.data[key] = value
 	v.updatedAt = time.Now()
+	return nil
 }
 
 // DataDelete removes a verifier data key and updates UpdatedAt.

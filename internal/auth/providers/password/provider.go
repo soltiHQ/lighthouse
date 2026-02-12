@@ -26,6 +26,11 @@ func (*Provider) Kind() kind.Auth { return kind.Password }
 
 // Authenticate authenticates the user by subject/password.
 //
+// Contract:
+//   - Does not leak which field was wrong (subject/password/user state).
+//   - Uses Credential as (user <-> auth kind) binding.
+//   - Uses Verifier as verification material store (bcrypt hash, params, etc).
+//
 // Errors:
 //   - auth.ErrInvalidRequest for invalid wiring or wrong request type/kind.
 //   - auth.ErrInvalidCredentials for subject/password mismatch (no field leakage).
@@ -34,10 +39,7 @@ func (p *Provider) Authenticate(ctx context.Context, req providers.Request) (*pr
 	if p == nil || p.store == nil {
 		return nil, auth.ErrInvalidRequest
 	}
-	if req == nil {
-		return nil, auth.ErrInvalidRequest
-	}
-	if req.AuthKind() != kind.Password {
+	if req == nil || req.AuthKind() != kind.Password {
 		return nil, auth.ErrInvalidRequest
 	}
 
@@ -68,9 +70,17 @@ func (p *Provider) Authenticate(ctx context.Context, req providers.Request) (*pr
 		return nil, err
 	}
 
-	if err = credentials.VerifyPassword(cred, r.Password); err != nil {
+	ver, err := p.store.GetVerifierByCredential(ctx, cred.ID())
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, auth.ErrInvalidCredentials
+		}
+		return nil, err
+	}
+	if err = credentials.VerifyPassword(cred, ver, r.Password); err != nil {
 		return nil, auth.ErrInvalidCredentials
 	}
+
 	return &providers.Result{
 		User:       u,
 		Credential: cred,

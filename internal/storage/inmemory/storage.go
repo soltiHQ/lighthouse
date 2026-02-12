@@ -261,6 +261,40 @@ func (s *Store) DeleteVerifier(ctx context.Context, id string) error {
 	return s.verifiers.Delete(ctx, id)
 }
 
+func (s *Store) DeleteVerifierByCredential(ctx context.Context, credentialID string) error {
+	if credentialID == "" {
+		return storage.ErrInvalidArgument
+	}
+
+	s.verifiers.mu.RLock()
+	var (
+		foundID string
+		i       int
+	)
+	for id, v := range s.verifiers.data {
+		if i%1000 == 0 {
+			select {
+			case <-ctx.Done():
+				s.verifiers.mu.RUnlock()
+				return ctx.Err()
+			default:
+			}
+		}
+		i++
+
+		if v.CredentialID() == credentialID {
+			foundID = id
+			break
+		}
+	}
+	s.verifiers.mu.RUnlock()
+
+	if foundID == "" {
+		return nil
+	}
+	return s.verifiers.Delete(ctx, foundID)
+}
+
 // --- Sessions ---
 
 func (s *Store) CreateSession(ctx context.Context, sess *model.Session) error {
@@ -272,6 +306,20 @@ func (s *Store) CreateSession(ctx context.Context, sess *model.Session) error {
 
 func (s *Store) GetSession(ctx context.Context, id string) (*model.Session, error) {
 	return s.sessions.Get(ctx, id)
+}
+
+func (s *Store) ListSessionsByUser(ctx context.Context, userID string) ([]*model.Session, error) {
+	if userID == "" {
+		return nil, storage.ErrInvalidArgument
+	}
+
+	res, err := s.sessions.List(ctx, func(sess *model.Session) bool {
+		return sess.UserID() == userID
+	}, storage.ListOptions{Limit: storage.MaxListLimit})
+	if err != nil {
+		return nil, err
+	}
+	return res.Items, nil
 }
 
 func (s *Store) RotateRefresh(ctx context.Context, sessionID string, newHash []byte, newExpiresAt time.Time) error {
@@ -303,6 +351,25 @@ func (s *Store) RevokeSession(ctx context.Context, sessionID string, revokedAt t
 
 func (s *Store) DeleteSession(ctx context.Context, id string) error {
 	return s.sessions.Delete(ctx, id)
+}
+
+func (s *Store) DeleteSessionsByUser(ctx context.Context, userID string) error {
+	if userID == "" {
+		return storage.ErrInvalidArgument
+	}
+
+	sessions, err := s.ListSessionsByUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	for _, sess := range sessions {
+		if sess == nil {
+			continue
+		}
+		_ = s.sessions.Delete(ctx, sess.ID())
+	}
+	return nil
 }
 
 // --- Roles ---
