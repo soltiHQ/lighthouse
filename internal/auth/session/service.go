@@ -2,9 +2,7 @@ package session
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/subtle"
-	"encoding/hex"
 	"errors"
 
 	"github.com/soltiHQ/control-plane/domain/kind"
@@ -22,7 +20,10 @@ type RBACResolver interface {
 	ResolveUserPermissions(ctx context.Context, u *model.User) ([]kind.Permission, error)
 }
 
-// Service provides session/token business logic.
+// Service provides session and token business logic.
+//
+// Service authenticates a principal through a provider, enforces authorization
+// via RBAC, persists a session record (refresh hash), and issues an access token.
 type Service struct {
 	store storage.Storage
 
@@ -36,6 +37,9 @@ type Service struct {
 }
 
 // New creates a new session service.
+//
+// If clk is nil, token.RealClock() is used.
+// If provs is nil, an empty provider map is created.
 func New(
 	store storage.Storage,
 	issuer token.Issuer,
@@ -60,6 +64,7 @@ func New(
 	}
 }
 
+// ensureReady validates that the service is properly wired.
 func (s *Service) ensureReady() error {
 	if s == nil || s.store == nil || s.issuer == nil || s.rbac == nil || s.clock == nil {
 		return auth.ErrInvalidRequest
@@ -67,6 +72,7 @@ func (s *Service) ensureReady() error {
 	return nil
 }
 
+// provider returns a provider for the given kind and validates its kind contract.
 func (s *Service) provider(kind kind.Auth) (providers.Provider, error) {
 	p := s.providers[kind]
 	if p == nil {
@@ -79,10 +85,19 @@ func (s *Service) provider(kind kind.Auth) (providers.Provider, error) {
 }
 
 // Login authenticates using the specified auth kind, creates a session,
-// and returns access+refresh tokens.
+// and returns access+refresh tokens along with the identity used for issuance.
 //
-// For password auth kind, subject/password are used.
-// Other kinds may interpret subject/password differently.
+// Contract:
+//   - Authenticate is delegated to the configured provider for authKind.
+//   - Authorization is enforced via RBAC: an empty effective permission set is denied.
+//   - On success, only a hash of the refresh token is stored; raw refresh token is returned to caller.
+//   - a Returned permission list in identity is the effective permission set.
+//
+// Errors:
+//   - auth.ErrInvalidRequest for invalid wiring, unsupported auth kind, or invalid provider mapping.
+//   - auth.ErrInvalidCredentials when subject/secret are empty (caller error).
+//   - auth.ErrUnauthorized when RBAC denies access (no effective permissions or resolver error).
+//   - Propagates provider and storage errors from dependencies.
 func (s *Service) Login(ctx context.Context, authKind kind.Auth, subject, secret string) (*TokenPair, *identity.Identity, error) {
 	if err := s.ensureReady(); err != nil {
 		return nil, nil, err
@@ -142,7 +157,7 @@ func (s *Service) Login(ctx context.Context, authKind kind.Auth, subject, secret
 	if err != nil {
 		return nil, nil, err
 	}
-	if err := s.store.CreateSession(ctx, sess); err != nil {
+	if err = s.store.CreateSession(ctx, sess); err != nil {
 		return nil, nil, err
 	}
 
@@ -174,7 +189,21 @@ func (s *Service) Login(ctx context.Context, authKind kind.Auth, subject, secret
 	return &TokenPair{AccessToken: access, RefreshToken: refreshRaw}, id, nil
 }
 
-// Refresh validates refresh token against stored session and issues a new access token.
+// Refresh validates a refresh token against the stored session and issues a new access token.
+//
+// Contract:
+//   - refresh token verification uses constant-time comparison.
+//   - A revoked session is rejected with auth.ErrRevoked.
+//   - An expired session or mismatched token is rejected with auth.ErrInvalidRefresh.
+//   - Authorization is enforced via RBAC: empty effective permission set is denied.
+//   - When cfg.RotateRefresh is enabled, refresh token is rotated and the stored hash+expiry are updated.
+//
+// Errors:
+//   - auth.ErrInvalidRequest for invalid wiring.
+//   - auth.ErrInvalidRefresh for malformed input or failed validation (no detail leakage).
+//   - auth.ErrRevoked when the session is revoked.
+//   - auth.ErrUnauthorized when RBAC denies access (no effective permissions or resolver error).
+//   - Propagates storage and issuer errors from dependencies where applicable.
 func (s *Service) Refresh(ctx context.Context, sessionID, refreshRaw string) (*TokenPair, *identity.Identity, error) {
 	if err := s.ensureReady(); err != nil {
 		return nil, nil, err
@@ -258,6 +287,12 @@ func (s *Service) Refresh(ctx context.Context, sessionID, refreshRaw string) (*T
 	return &TokenPair{AccessToken: access, RefreshToken: outRefresh}, id, nil
 }
 
+// Revoke revokes a session by ID.
+//
+// Errors:
+//   - auth.ErrInvalidRequest for invalid wiring or empty session ID.
+//   - auth.ErrInvalidRequest if the session does not exist.
+//   - Propagates storage errors for backend failures.
 func (s *Service) Revoke(ctx context.Context, sessionID string) error {
 	if err := s.ensureReady(); err != nil {
 		return err
@@ -272,12 +307,4 @@ func (s *Service) Revoke(ctx context.Context, sessionID string) error {
 		return err
 	}
 	return nil
-}
-
-func newID16() (string, error) {
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b[:]), nil
 }

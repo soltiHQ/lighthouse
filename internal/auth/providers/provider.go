@@ -10,7 +10,15 @@ import (
 // Request is an auth-provider-specific request.
 //
 // Each provider defines its own concrete request type and must validate it using type assertions in Authenticate().
+//
+// AuthKind must return the authentication mechanism that this request targets.
+// It is used by the provider to ensure that:
+//
+//   - The request is intended for the specific provider implementation.
+//   - The provider's Kind() matches the request's AuthKind().
+//   - Mismatched request/provider combinations are rejected with ErrInvalidRequest.
 type Request interface {
+	// AuthKind returns the authentication mechanism this request is intended for (e.g., kind.Password, kind.APIKey).
 	AuthKind() kind.Auth
 }
 

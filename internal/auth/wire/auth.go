@@ -1,4 +1,4 @@
-package svc
+package wire
 
 import (
 	"time"
@@ -19,15 +19,43 @@ const (
 	issuer   = "solti"
 )
 
+// Auth is a composition root for the authentication subsystem.
+//
+// It wires together:
+//
+//   - JWT issuer and verifier (HS256)
+//   - Session service (login/refresh/revoke use cases)
+//   - RBAC resolver
+//   - Password auth provider
+//   - Login rate limiter
+//
+// Auth does not implement business logic itself; it aggregates fully
+// configured components ready for use by HTTP/transport layers.
 type Auth struct {
+	// Clock used by token issuance and verification.
 	Clock token.Clock
 
-	Limiter  *ratelimit.Limiter
-	Session  *session2.Service
+	// Limiter tracks failed login attempts and enforces temporary blocking.
+	Limiter *ratelimit.Limiter
+
+	// Session provides login, refresh, and revoke operations.
+	Session *session2.Service
+
+	// Verifier validates incoming access tokens.
 	Verifier *jwt.HSVerifier
 }
 
-// NewAuth creates a new auth service.
+// NewAuth constructs a fully wired authentication stack.
+//
+// Contract:
+//
+//   - secret must be non-empty to produce valid signed tokens.
+//   - aTTL controls access token lifetime.
+//   - rTTL controls refresh token lifetime.
+//   - wTTL controls rate-limit block window duration.
+//   - attemptLimit defines the number of failed attempts before blocking.
+//   - HS256 is used for signing and verification.
+//   - Refresh token rotation is enabled by default.
 func NewAuth(storage storage.Storage, secret string, aTTL, rTTL, wTTL time.Duration, attemptLimit int) *Auth {
 	var (
 		clock   = token.RealClock()

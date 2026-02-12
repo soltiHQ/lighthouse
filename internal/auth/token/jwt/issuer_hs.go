@@ -27,7 +27,6 @@ func NewHSIssuer(secret []byte, clock token.Clock) *HSIssuer {
 	}
 }
 
-// Issue signs and returns a JWT token for the given identity.
 func (i *HSIssuer) Issue(_ context.Context, id *identity.Identity) (string, error) {
 	if id == nil {
 		return "", auth.ErrInvalidToken

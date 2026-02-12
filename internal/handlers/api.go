@@ -7,7 +7,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/soltiHQ/control-plane/internal/auth"
-	"github.com/soltiHQ/control-plane/internal/auth/svc"
+	"github.com/soltiHQ/control-plane/internal/auth/wire"
 	"github.com/soltiHQ/control-plane/internal/backend"
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
@@ -17,11 +17,11 @@ import (
 type API struct {
 	logger  zerolog.Logger
 	backend *backend.Login
-	auth    *svc.Auth
+	auth    *wire.Auth
 }
 
 // NewAPI creates a new API handler.
-func NewAPI(logger zerolog.Logger, auth *svc.Auth, backend *backend.Login) *API {
+func NewAPI(logger zerolog.Logger, auth *wire.Auth, backend *backend.Login) *API {
 	return &API{logger: logger, auth: auth, backend: backend}
 }
 

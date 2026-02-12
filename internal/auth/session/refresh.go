@@ -8,8 +8,13 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+const (
+	refreshTokenBytes = 32
+)
+
+// newRefreshToken generates a new refresh token and its hash suitable for storage.
 func newRefreshToken() (raw string, hash []byte, err error) {
-	var b [32]byte
+	var b [refreshTokenBytes]byte
 	if _, err = rand.Read(b[:]); err != nil {
 		return "", nil, err
 	}
@@ -21,6 +26,7 @@ func newRefreshToken() (raw string, hash []byte, err error) {
 	return raw, hash, nil
 }
 
+// hashRefreshToken hashes a provided raw refresh token value.
 func hashRefreshToken(raw string) ([]byte, error) {
 	if raw == "" {
 		return nil, auth.ErrInvalidRefresh

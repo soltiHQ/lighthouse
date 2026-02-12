@@ -6,16 +6,16 @@ import (
 	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/internal/auth"
 	"github.com/soltiHQ/control-plane/internal/auth/identity"
-	"github.com/soltiHQ/control-plane/internal/auth/svc"
+	"github.com/soltiHQ/control-plane/internal/auth/wire"
 )
 
 // Login implements shared login use-case.
 type Login struct {
-	auth *svc.Auth
+	auth *wire.Auth
 }
 
 // NewLogin creates a new Login use-case.
-func NewLogin(authSvc *svc.Auth) *Login {
+func NewLogin(authSvc *wire.Auth) *Login {
 	if authSvc == nil {
 		panic("backend: nil auth service")
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/internal/auth"
-	"github.com/soltiHQ/control-plane/internal/auth/svc"
+	"github.com/soltiHQ/control-plane/internal/auth/wire"
 	"github.com/soltiHQ/control-plane/internal/backend"
 	"github.com/soltiHQ/control-plane/internal/storage"
 	"github.com/soltiHQ/control-plane/internal/storage/inmemory"
@@ -22,14 +22,14 @@ import (
 // UI serves browser-facing HTML endpoints (and HTMX blocks).
 type UI struct {
 	logger zerolog.Logger
-	auth   *svc.Auth
+	auth   *wire.Auth
 
 	loginUC  *backend.Login
 	agentsUC *backend.Agents
 	usersUC  *backend.Users
 }
 
-func NewUI(logger zerolog.Logger, auth *svc.Auth, loginUC *backend.Login, agentsUC *backend.Agents, usersUC *backend.Users) *UI {
+func NewUI(logger zerolog.Logger, auth *wire.Auth, loginUC *backend.Login, agentsUC *backend.Agents, usersUC *backend.Users) *UI {
 	return &UI{
 		logger:   logger,
 		auth:     auth,

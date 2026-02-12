@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/soltiHQ/control-plane/internal/auth/wire"
 	"google.golang.org/grpc"
 
 	discoverv1 "github.com/soltiHQ/control-plane/domain/gen/v1"
 	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/domain/model"
 	"github.com/soltiHQ/control-plane/internal/auth/credentials"
-	"github.com/soltiHQ/control-plane/internal/auth/svc"
 	"github.com/soltiHQ/control-plane/internal/backend"
 	"github.com/soltiHQ/control-plane/internal/handlers"
 	"github.com/soltiHQ/control-plane/internal/server"
@@ -40,7 +40,7 @@ func main() {
 
 	// Auth stack
 	jwtSecret := "dev-secret-change-me-in-production"
-	authSVC := svc.NewAuth(
+	authSVC := wire.NewAuth(
 		store,
 		jwtSecret,
 		1*time.Minute,
