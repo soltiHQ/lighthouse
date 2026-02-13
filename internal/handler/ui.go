@@ -36,16 +36,12 @@ func NewUI(logger zerolog.Logger, accessSVC *access.Service) *UI {
 }
 
 // Routes registers UI routes.
-func (u *UI) Routes(mux *http.ServeMux, auth route.BaseMW, perm route.PermMW, common ...route.BaseMW) {
+func (u *UI) Routes(mux *http.ServeMux, auth route.BaseMW, _ route.PermMW, common ...route.BaseMW) {
 	route.HandleFunc(mux, "/login", u.Login, common...)
 	route.HandleFunc(mux, "/logout", u.Logout, append(common, auth)...)
 
 	route.HandleFunc(mux, "/users", u.Users, append(common, auth)...)
 	route.HandleFunc(mux, "/", u.Main, append(common, auth)...)
-	_ = perm
-	//route.HandleFunc(mux, "/users/new", u.UsersForm,
-	//	append(common, auth, perm(kind.UsersAdd))...,
-	//)
 }
 
 // Login handles GET/POST /login.

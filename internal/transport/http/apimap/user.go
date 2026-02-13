@@ -10,12 +10,13 @@ func User(u *model.User) v1.User {
 		return v1.User{}
 	}
 
-	perms := u.PermissionsAll()
-	permStr := make([]string, 0, len(perms))
+	var (
+		perms   = u.PermissionsAll()
+		permStr = make([]string, 0, len(perms))
+	)
 	for _, p := range perms {
 		permStr = append(permStr, string(p))
 	}
-
 	return v1.User{
 		ID:          u.ID(),
 		Subject:     u.Subject(),
