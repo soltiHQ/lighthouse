@@ -2,7 +2,7 @@ package user
 
 import (
 	"github.com/soltiHQ/control-plane/domain/model"
-	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
+	"github.com/soltiHQ/control-plane/ui/templates/component/card"
 	"github.com/soltiHQ/control-plane/ui/templates/component/search"
 )
 
@@ -44,9 +44,9 @@ templ Cards(items []*model.User) {
 		</div>
 	} else {
 		for _, u := range items {
-			@datagrid.Card("") {
-				@datagrid.CardHeader() {
-					@datagrid.CardTitle() {
+			@card.Card("") {
+				@card.CardHeader() {
+					@card.CardTitle() {
 						{ u.Subject() }
 					}
 
@@ -61,7 +61,7 @@ templ Cards(items []*model.User) {
 					}
 				}
 
-				@datagrid.CardBody() {
+				@card.CardBody() {
 					<div class="text-sm text-muted-strong">{ u.Name() }</div>
 					<div class="text-xs text-muted">{ u.Email() }</div>
 				}
