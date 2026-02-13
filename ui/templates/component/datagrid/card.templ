@@ -1,0 +1,46 @@
+package datagrid
+
+templ Card(href string) {
+	{{
+		base := `
+			rounded-[var(--r-6)]
+			border border-border
+			bg-card
+			p-4
+			space-y-2
+		`
+		linkExtras := `
+			block
+			transition-colors
+			hover:border-primary/40
+			cursor-pointer
+		`
+	}}
+	if href != "" {
+		<a href={ href } class={ base + linkExtras }>
+			{ children... }
+		</a>
+	} else {
+		<div class={ base }>
+			{ children... }
+		</div>
+	}
+}
+
+templ CardHeader() {
+	<div class="flex items-center justify-between">
+		{ children... }
+	</div>
+}
+
+templ CardTitle() {
+	<div class="text-sm font-semibold text-fg">
+		{ children... }
+	</div>
+}
+
+templ CardBody() {
+	<div class="space-y-1">
+		{ children... }
+	</div>
+}
