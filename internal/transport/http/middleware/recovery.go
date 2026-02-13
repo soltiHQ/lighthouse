@@ -8,6 +8,7 @@ import (
 	"github.com/felixge/httpsnoop"
 	"github.com/rs/zerolog"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
+	"github.com/soltiHQ/control-plane/internal/transport/httpctx"
 	"github.com/soltiHQ/control-plane/internal/transportctx"
 )
 
@@ -57,7 +58,7 @@ func Recovery(logger zerolog.Logger) func(http.Handler) http.Handler {
 					}
 					return
 				}
-				response.Unavailable(w, r, response.RenderPage)
+				response.Unavailable(w, r, httpctx.Mode(r.Context()))
 			}()
 			next.ServeHTTP(wrapped, r)
 		})

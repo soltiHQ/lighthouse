@@ -1,12 +1,12 @@
 package pages
 
 import (
-	"github.com/soltiHQ/control-plane/internal/backend"
+	"github.com/soltiHQ/control-plane/internal/ui/policy"
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 	"github.com/soltiHQ/control-plane/ui/templates/component"
 )
 
-templ Users(nav backend.Nav) {
+templ Users(nav policy.Nav) {
 	@layout.App("Users", "users", nav) {
 		<div class="space-y-6">
 			<div class="flex items-center justify-between">
@@ -21,7 +21,7 @@ templ Users(nav backend.Nav) {
 
 			<div
 				id="users-list"
-				hx-get="/users/list"
+				hx-get="/api/v1/users"
 				hx-trigger="load"
 				hx-target="this"
 				hx-swap="innerHTML"

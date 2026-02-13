@@ -2,10 +2,10 @@ package pages
 
 import (
     "github.com/soltiHQ/control-plane/ui/templates/layout"
-    "github.com/soltiHQ/control-plane/internal/backend"
+    "github.com/soltiHQ/control-plane/internal/ui/policy"
 )
 
-templ Main(nav backend.Nav) {
+templ Main(nav policy.Nav) {
 	@layout.App("Dashboard", "home", nav) {
 		<div class="space-y-4">
 			<h1 class="text-2xl font-bold text-fg">

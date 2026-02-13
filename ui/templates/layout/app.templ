@@ -1,11 +1,11 @@
 package layout
 
 import (
-    "github.com/soltiHQ/control-plane/internal/backend"
+    "github.com/soltiHQ/control-plane/internal/ui/policy"
     "github.com/soltiHQ/control-plane/ui/templates/component"
 )
 
-templ App(title string, active string, nav backend.Nav) {
+templ App(title string, active string, nav policy.Nav) {
 	@Root(title) {
 		@component.VBar(active, nav)
 

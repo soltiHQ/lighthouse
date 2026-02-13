@@ -11,16 +11,8 @@ import (
 	"github.com/a-h/templ"
 )
 
-// RenderMode defines how an HTTP response should be rendered.
-type RenderMode int
-
-const (
-	RenderPage RenderMode = iota
-	RenderBlock
-)
-
 // OK renders a 200 response.
-func OK(w http.ResponseWriter, r *http.Request, mode RenderMode, v *responder.View) {
+func OK(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, v *responder.View) {
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusOK, v)
 }
 
@@ -37,7 +29,7 @@ type errorBody struct {
 }
 
 // NotFound renders a 404 response.
-func NotFound(w http.ResponseWriter, r *http.Request, mode RenderMode) {
+func NotFound(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
 	reqId := transportctx.TryRequestID(r.Context())
 
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusNotFound, &responder.View{
@@ -46,8 +38,8 @@ func NotFound(w http.ResponseWriter, r *http.Request, mode RenderMode) {
 			Message:   "not found",
 			RequestID: reqId,
 		},
-		Component: func(m RenderMode) templ.Component {
-			if m == RenderPage {
+		Component: func(m httpctx.RenderMode) templ.Component {
+			if m == httpctx.RenderPage {
 				return pages.ErrorPage(
 					http.StatusNotFound,
 					"Page not found",
@@ -61,7 +53,7 @@ func NotFound(w http.ResponseWriter, r *http.Request, mode RenderMode) {
 }
 
 // BadRequest renders a 400 response.
-func BadRequest(w http.ResponseWriter, r *http.Request, mode RenderMode) {
+func BadRequest(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
 	reqId := transportctx.TryRequestID(r.Context())
 
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusBadRequest, &responder.View{
@@ -70,8 +62,8 @@ func BadRequest(w http.ResponseWriter, r *http.Request, mode RenderMode) {
 			Message:   "invalid request",
 			RequestID: reqId,
 		},
-		Component: func(m RenderMode) templ.Component {
-			if m == RenderPage {
+		Component: func(m httpctx.RenderMode) templ.Component {
+			if m == httpctx.RenderPage {
 				return pages.ErrorPage(
 					http.StatusBadRequest,
 					"Invalid request",
@@ -84,8 +76,32 @@ func BadRequest(w http.ResponseWriter, r *http.Request, mode RenderMode) {
 	})
 }
 
+// NotAllowed renders a 405 response.
+func NotAllowed(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
+	reqId := transportctx.TryRequestID(r.Context())
+
+	httpctx.Responder(r.Context()).Respond(w, r, http.StatusMethodNotAllowed, &responder.View{
+		Data: errorBody{
+			Code:      http.StatusMethodNotAllowed,
+			Message:   "not allowed",
+			RequestID: reqId,
+		},
+		Component: func(m httpctx.RenderMode) templ.Component {
+			if m == httpctx.RenderPage {
+				return pages.ErrorPage(
+					http.StatusMethodNotAllowed,
+					"Method not allowed",
+					"The method you used is not allowed on this resource.",
+					reqId,
+				)
+			}
+			return nil
+		}(mode),
+	})
+}
+
 // Forbidden renders a 403 response.
-func Forbidden(w http.ResponseWriter, r *http.Request, mode RenderMode) {
+func Forbidden(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
 	reqId := transportctx.TryRequestID(r.Context())
 
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusForbidden, &responder.View{
@@ -94,8 +110,8 @@ func Forbidden(w http.ResponseWriter, r *http.Request, mode RenderMode) {
 			Message:   "forbidden",
 			RequestID: reqId,
 		},
-		Component: func(m RenderMode) templ.Component {
-			if m == RenderPage {
+		Component: func(m httpctx.RenderMode) templ.Component {
+			if m == httpctx.RenderPage {
 				return pages.ErrorPage(
 					http.StatusForbidden,
 					"Forbidden",
@@ -109,7 +125,7 @@ func Forbidden(w http.ResponseWriter, r *http.Request, mode RenderMode) {
 }
 
 // Unauthorized renders a 401 response.
-func Unauthorized(w http.ResponseWriter, r *http.Request, mode RenderMode) {
+func Unauthorized(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
 	reqId := transportctx.TryRequestID(r.Context())
 
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusUnauthorized, &responder.View{
@@ -118,8 +134,8 @@ func Unauthorized(w http.ResponseWriter, r *http.Request, mode RenderMode) {
 			Message:   "unauthorized",
 			RequestID: reqId,
 		},
-		Component: func(m RenderMode) templ.Component {
-			if m == RenderPage {
+		Component: func(m httpctx.RenderMode) templ.Component {
+			if m == httpctx.RenderPage {
 				return pages.ErrorPage(
 					http.StatusUnauthorized,
 					"Unauthorized",
@@ -133,7 +149,7 @@ func Unauthorized(w http.ResponseWriter, r *http.Request, mode RenderMode) {
 }
 
 // Unavailable renders a 503 response.
-func Unavailable(w http.ResponseWriter, r *http.Request, mode RenderMode) {
+func Unavailable(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
 	reqId := transportctx.TryRequestID(r.Context())
 
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusServiceUnavailable, &responder.View{
@@ -142,8 +158,8 @@ func Unavailable(w http.ResponseWriter, r *http.Request, mode RenderMode) {
 			Message:   "service unavailable",
 			RequestID: reqId,
 		},
-		Component: func(m RenderMode) templ.Component {
-			if m == RenderPage {
+		Component: func(m httpctx.RenderMode) templ.Component {
+			if m == httpctx.RenderPage {
 				return pages.ErrorPage(
 					http.StatusServiceUnavailable,
 					"Service unavailable",
@@ -157,7 +173,7 @@ func Unavailable(w http.ResponseWriter, r *http.Request, mode RenderMode) {
 }
 
 // AuthRateLimit renders a 429 response.
-func AuthRateLimit(w http.ResponseWriter, r *http.Request, mode RenderMode) {
+func AuthRateLimit(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
 	reqId := transportctx.TryRequestID(r.Context())
 
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusTooManyRequests, &responder.View{
@@ -166,8 +182,8 @@ func AuthRateLimit(w http.ResponseWriter, r *http.Request, mode RenderMode) {
 			Message:   "too many auth requests",
 			RequestID: reqId,
 		},
-		Component: func(m RenderMode) templ.Component {
-			if m == RenderPage {
+		Component: func(m httpctx.RenderMode) templ.Component {
+			if m == httpctx.RenderPage {
 				return pages.ErrorPage(
 					http.StatusTooManyRequests,
 					"Too many auth attempts",

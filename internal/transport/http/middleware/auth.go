@@ -10,6 +10,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/auth/token"
 	"github.com/soltiHQ/control-plane/internal/transport/http/cookie"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
+	"github.com/soltiHQ/control-plane/internal/transport/httpctx"
 	"github.com/soltiHQ/control-plane/internal/transportctx"
 )
 
@@ -17,9 +18,12 @@ import (
 func Auth(verifier token.Verifier, sessionSvc *session.Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			raw, fromHeader := extractBearer(r)
+			var (
+				mode            = httpctx.Mode(r.Context())
+				raw, fromHeader = extractBearer(r)
+			)
 			if raw == "" {
-				response.Unauthorized(w, r, response.RenderPage)
+				response.Unauthorized(w, r, mode)
 				return
 			}
 
@@ -29,13 +33,13 @@ func Auth(verifier token.Verifier, sessionSvc *session.Service) func(http.Handle
 				return
 			}
 			if fromHeader {
-				response.Unauthorized(w, r, response.RenderPage)
+				response.Unauthorized(w, r, mode)
 				return
 			}
 
 			id, err = tryRefresh(w, r, sessionSvc)
 			if err != nil {
-				response.Unauthorized(w, r, response.RenderPage)
+				response.Unauthorized(w, r, mode)
 				return
 			}
 			next.ServeHTTP(w, r.WithContext(transportctx.WithIdentity(r.Context(), id)))
@@ -47,13 +51,16 @@ func Auth(verifier token.Verifier, sessionSvc *session.Service) func(http.Handle
 func RequirePermission(perm kind.Permission) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			id, ok := transportctx.Identity(r.Context())
+			var (
+				mode   = httpctx.Mode(r.Context())
+				id, ok = transportctx.Identity(r.Context())
+			)
 			if !ok {
-				response.Unauthorized(w, r, response.RenderPage)
+				response.Unauthorized(w, r, mode)
 				return
 			}
 			if !id.HasPermission(perm) {
-				response.Forbidden(w, r, response.RenderPage)
+				response.Forbidden(w, r, mode)
 				return
 			}
 			next.ServeHTTP(w, r)
