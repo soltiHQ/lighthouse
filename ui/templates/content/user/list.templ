@@ -44,7 +44,7 @@ templ Cards(items []*model.User) {
 		</div>
 	} else {
 		for _, u := range items {
-			@card.Card("") {
+			@card.Card("/users/info/" + u.ID()) {
 				@card.CardHeader() {
 					@card.CardTitle() {
 						{ u.Subject() }
@@ -87,7 +87,7 @@ templ Footer(nextCursor string, q string) {
 templ RowsResponse(items []*model.User, nextCursor string, q string) {
 	if len(items) != 0 {
 		for _, u := range items {
-			@card.Card("") {
+			@card.Card("/users/id/" + u.ID()) {
 				@card.CardHeader() {
 					@card.CardTitle() {
 						{ u.Subject() }

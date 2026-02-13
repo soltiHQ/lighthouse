@@ -1,0 +1,91 @@
+package user
+
+import (
+	v1 "github.com/soltiHQ/control-plane/api/v1"
+	"github.com/soltiHQ/control-plane/ui/templates/component/button"
+	"github.com/soltiHQ/control-plane/ui/templates/component/card"
+)
+
+templ Detail(apiUser v1.User) {
+	@Identity(apiUser)
+}
+
+templ Identity(u v1.User) {
+	@card.Block("User") {
+		<div class="space-y-4">
+			<div class="space-y-1">
+				<div class="text-xs text-muted-strong">ID</div>
+				<div class="text-sm font-mono text-fg break-words">{ u.ID }</div>
+			</div>
+
+			<div class="space-y-1">
+				<div class="text-xs text-muted-strong">Subject</div>
+				<div class="text-sm text-fg break-words">{ u.Subject }</div>
+			</div>
+
+			if u.Name != "" {
+				<div class="space-y-1">
+					<div class="text-xs text-muted-strong">Name</div>
+					<div class="text-sm text-fg break-words">{ u.Name }</div>
+				</div>
+			}
+
+			if u.Email != "" {
+				<div class="space-y-1">
+					<div class="text-xs text-muted-strong">Email</div>
+					<div class="text-sm text-fg break-words">{ u.Email }</div>
+				</div>
+			}
+
+			<div class="pt-1">
+				if u.Disabled {
+					<span class="inline-flex items-center rounded-full bg-danger/10 text-danger px-3 py-1 text-xs">
+						Disabled
+					</span>
+				} else {
+					<span class="inline-flex items-center rounded-full bg-success/10 text-success px-3 py-1 text-xs">
+						Active
+					</span>
+				}
+			</div>
+
+			<div class="pt-2 space-y-2">
+				<div class="text-xs uppercase tracking-[0.12em] text-muted-strong">
+					Quick actions
+				</div>
+
+				<div class="flex flex-col gap-2">
+					@button.Link("Edit", "/users/edit/" + u.ID, true, "secondary")
+					@button.Link("Delete", "/users/delete/" + u.ID, true, "danger")
+				</div>
+			</div>
+
+			if len(u.Permissions) > 0 {
+				<div class="pt-2 space-y-2">
+					<div class="text-xs uppercase tracking-[0.12em] text-muted-strong">
+						Permissions
+					</div>
+					@Permissions(u.Permissions)
+				</div>
+			}
+		</div>
+	}
+}
+
+templ Permissions(items []string) {
+	<div class="flex flex-wrap gap-2">
+		for _, p := range items {
+			<span
+				class="
+					inline-flex items-center
+					px-2 py-1
+					rounded-[var(--r-6)]
+					bg-nav-bg
+					text-xs font-mono text-fg/80
+				"
+			>
+				{ p }
+			</span>
+		}
+	</div>
+}

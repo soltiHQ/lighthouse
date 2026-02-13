@@ -1,0 +1,43 @@
+package user
+
+import (
+	"github.com/soltiHQ/control-plane/internal/ui/policy"
+	"github.com/soltiHQ/control-plane/ui/templates/layout"
+)
+
+templ Detail(nav policy.Nav, userID string) {
+	@layout.App("User", "users", nav) {
+		<div
+			class="
+				grid gap-6
+				lg:grid-cols-[1fr_360px]
+			"
+		>
+			<div
+				id="user-identity"
+				hx-get={ "/api/v1/users/detail/" + userID }
+				hx-trigger="load"
+				hx-target="this"
+				hx-swap="innerHTML"
+				class="min-h-[120px]"
+			>
+				<div class="text-sm text-muted">
+					Loading user...
+				</div>
+			</div>
+
+			<div
+				id="user-sessions"
+				hx-get={ "/api/v1/users/session/" + userID }
+				hx-trigger="load"
+				hx-target="this"
+				hx-swap="innerHTML"
+				class="min-h-[120px]"
+			>
+				<div class="text-sm text-muted">
+					Loading sessions...
+				</div>
+			</div>
+		</div>
+	}
+}

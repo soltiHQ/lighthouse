@@ -3,9 +3,11 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/a-h/templ"
 	"github.com/rs/zerolog"
+	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/internal/auth"
 	"github.com/soltiHQ/control-plane/internal/service/access"
 	"github.com/soltiHQ/control-plane/internal/transport/http/cookie"
@@ -16,7 +18,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/transportctx"
 	"github.com/soltiHQ/control-plane/internal/ui/policy"
 	pages "github.com/soltiHQ/control-plane/ui/templates/page"
-	"github.com/soltiHQ/control-plane/ui/templates/page/user"
+	pageUser "github.com/soltiHQ/control-plane/ui/templates/page/user"
 )
 
 // UI handlers
@@ -37,11 +39,12 @@ func NewUI(logger zerolog.Logger, accessSVC *access.Service) *UI {
 }
 
 // Routes registers UI routes.
-func (u *UI) Routes(mux *http.ServeMux, auth route.BaseMW, _ route.PermMW, common ...route.BaseMW) {
+func (u *UI) Routes(mux *http.ServeMux, auth route.BaseMW, perm route.PermMW, common ...route.BaseMW) {
 	route.HandleFunc(mux, "/login", u.Login, common...)
 	route.HandleFunc(mux, "/logout", u.Logout, append(common, auth)...)
 
 	route.HandleFunc(mux, "/users", u.Users, append(common, auth)...)
+	route.HandleFunc(mux, "/users/info/", u.UserDetail, append(common, auth, perm(kind.UsersGet))...)
 	route.HandleFunc(mux, "/", u.Main, append(common, auth)...)
 }
 
@@ -135,7 +138,7 @@ func (u *UI) Logout(w http.ResponseWriter, r *http.Request) {
 // Main handle GET /.
 func (u *UI) Main(w http.ResponseWriter, r *http.Request) {
 	u.page(w, r, http.MethodGet, "/", func(nav policy.Nav) templ.Component {
-		return user.Main(nav)
+		return pageUser.Main(nav)
 	})
 }
 
@@ -143,6 +146,13 @@ func (u *UI) Main(w http.ResponseWriter, r *http.Request) {
 func (u *UI) Users(w http.ResponseWriter, r *http.Request) {
 	u.page(w, r, http.MethodGet, "/users", func(nav policy.Nav) templ.Component {
 		return pages.Users(nav)
+	})
+}
+
+// UserDetail handle GET /users/info/{}.
+func (u *UI) UserDetail(w http.ResponseWriter, r *http.Request) {
+	u.pageParam(w, r, http.MethodGet, "/users/info/", func(nav policy.Nav, userID string) templ.Component {
+		return pageUser.Detail(nav, userID)
 	})
 }
 
@@ -164,5 +174,32 @@ func (u *UI) page(w http.ResponseWriter, r *http.Request, m, p string, render fu
 	}
 	response.OK(w, r, mode, &responder.View{
 		Component: render(policy.BuildNav(id)),
+	})
+}
+
+func (u *UI) pageParam(w http.ResponseWriter, r *http.Request, m, p string, render func(nav policy.Nav, param string) templ.Component) {
+	mode := response.ModeFromRequest(r)
+	if r.Method != m {
+		response.NotAllowed(w, r, mode)
+		return
+	}
+	if !strings.HasPrefix(r.URL.Path, p) {
+		response.NotFound(w, r, mode)
+		return
+	}
+
+	param := strings.TrimPrefix(r.URL.Path, p)
+	if param == "" || strings.Contains(param, "/") {
+		response.NotFound(w, r, mode)
+		return
+	}
+	id, ok := transportctx.Identity(r.Context())
+	if !ok {
+		response.Unauthorized(w, r, mode)
+		return
+	}
+
+	response.OK(w, r, mode, &responder.View{
+		Component: render(policy.BuildNav(id), param),
 	})
 }

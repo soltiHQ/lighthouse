@@ -1,0 +1,22 @@
+package card
+
+templ Block(title string) {
+	<div
+		class="
+			w-full
+			rounded-[var(--r-6)]
+			border border-border
+			bg-card
+			p-5
+			space-y-4
+		"
+	>
+		if title != "" {
+			<div class="text-xs font-mono uppercase tracking-[0.12em] text-muted-strong">
+				{ title }
+			</div>
+		}
+
+		{ children... }
+	</div>
+}
