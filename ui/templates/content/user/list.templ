@@ -46,9 +46,9 @@ templ Cards(items []*model.User) {
 		@datagrid.Empty("No users found")
 	} else {
 		for _, u := range items {
-			@card.Card(routepath.PageUserInfoByID(u.ID())) {
-				@card.CardHeader() {
-					@card.CardTitle() {
+			@card.Item(routepath.PageUserInfoByID(u.ID())) {
+				@card.ItemHeader() {
+					@card.ItemTitle() {
 						{ u.Subject() }
 					}
 
@@ -63,7 +63,7 @@ templ Cards(items []*model.User) {
 					}
 				}
 
-				@card.CardBody() {
+				@card.ItemBody() {
 					<div class="text-sm text-muted-strong">{ u.Name() }</div>
 					<div class="text-xs text-muted-strong">{ u.Email() }</div>
 				}

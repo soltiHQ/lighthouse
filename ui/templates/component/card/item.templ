@@ -1,6 +1,6 @@
 package card
 
-templ Card(href string) {
+templ Item(href string) {
 	{{
 		base := `
 			rounded-[var(--r-6)]
@@ -28,19 +28,19 @@ templ Card(href string) {
 	}
 }
 
-templ CardHeader() {
+templ ItemHeader() {
 	<div class="flex items-center justify-between">
 		{ children... }
 	</div>
 }
 
-templ CardTitle() {
+templ ItemTitle() {
 	<div class="text-sm font-semibold text-fg">
 		{ children... }
 	</div>
 }
 
-templ CardBody() {
+templ ItemBody() {
 	<div class="space-y-1">
 		{ children... }
 	</div>
