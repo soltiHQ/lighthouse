@@ -18,7 +18,6 @@ import (
 	"github.com/soltiHQ/control-plane/internal/transportctx"
 	"github.com/soltiHQ/control-plane/internal/ui/policy"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
-	pages "github.com/soltiHQ/control-plane/ui/templates/page"
 	pageHome "github.com/soltiHQ/control-plane/ui/templates/page/home"
 	pageSystem "github.com/soltiHQ/control-plane/ui/templates/page/system"
 	pageUser "github.com/soltiHQ/control-plane/ui/templates/page/user"
@@ -148,7 +147,7 @@ func (u *UI) Main(w http.ResponseWriter, r *http.Request) {
 // Users handle GET /users.
 func (u *UI) Users(w http.ResponseWriter, r *http.Request) {
 	u.page(w, r, http.MethodGet, routepath.PageUsers, func(nav policy.Nav) templ.Component {
-		return pages.Users(nav)
+		return pageUser.Users(nav)
 	})
 }
 
