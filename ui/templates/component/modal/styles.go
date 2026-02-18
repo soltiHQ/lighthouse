@@ -6,7 +6,7 @@ const panel = "fixed inset-0 z-50 flex items-center justify-center p-4 "
 
 const container = "w-full max-w-md " +
 	"rounded-xl border border-border bg-card shadow-lg " +
-	"overflow-hidden "
+	"overflow-visible "
 
 const body = "p-6 space-y-2 "
 
@@ -14,7 +14,8 @@ const title = "text-base font-semibold text-fg "
 
 const message = "text-sm text-muted-strong leading-relaxed "
 
-const footer = "flex justify-end gap-2 px-6 py-4 border-t border-border bg-surface-dim "
+const footer = "flex justify-end gap-2 px-6 py-4 border-t border-border bg-surface-dim " +
+	"rounded-b-xl "
 
 func confirmButtonStyle(v Variant) string {
 	base := "inline-flex items-center justify-center gap-2 " +
@@ -39,3 +40,39 @@ const cancelButtonStyle = "inline-flex items-center justify-center gap-2 " +
 	"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 "
 
 const formBody = "p-6 space-y-4 "
+
+// Multi-select dropdown styles.
+const msWrapper = "relative "
+
+const msTrigger = "flex flex-wrap items-center gap-1.5 " +
+	"min-h-[2.75rem] w-full px-3 py-2 " +
+	"rounded-[var(--r-6)] " +
+	"bg-card text-fg text-sm " +
+	"border border-input " +
+	"hover:border-border " +
+	"focus:ring-2 focus:ring-primary/25 focus:border-primary " +
+	"outline-none transition-colors cursor-pointer "
+
+const msPlaceholder = "text-muted-strong text-sm "
+
+const msTag = "inline-flex items-center gap-1 " +
+	"rounded-full px-2.5 py-0.5 " +
+	"text-[11px] font-medium " +
+	"bg-primary/10 text-primary border border-primary/20 "
+
+const msTagRemove = "hover:text-danger transition-colors cursor-pointer shrink-0 "
+
+const msDropdown = "absolute z-10 bottom-full mb-1 w-full " +
+	"max-h-48 overflow-y-auto " +
+	"rounded-[var(--r-6)] " +
+	"bg-card border border-border shadow-lg " +
+	"py-1 "
+
+const msOption = "flex items-center gap-2 " +
+	"px-3 py-2 text-sm text-fg " +
+	"hover:bg-surface-dim " +
+	"cursor-pointer transition-colors "
+
+const msCheckbox = "w-4 h-4 rounded " +
+	"border border-input " +
+	"accent-primary pointer-events-none "

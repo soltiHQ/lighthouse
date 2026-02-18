@@ -54,6 +54,7 @@ func editFormData(fields []Field, selects []AsyncSelect) string {
 		v, _ := json.Marshal(s.Selected)
 		parts = append(parts, fmt.Sprintf("%s: %s", s.ID, string(v)))
 		parts = append(parts, fmt.Sprintf("%s_opts: []", s.ID))
+		parts = append(parts, fmt.Sprintf("%s_open: false", s.ID))
 	}
 
 	parts = append(parts, "loading: true")

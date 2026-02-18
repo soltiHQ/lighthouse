@@ -51,17 +51,52 @@ templ Edit(
 
 					for _, s := range selects {
 						<div>
-							<label for={ s.ID } class={ form.LabelClass }>{ s.Label }</label>
-							<select
-								id={ s.ID }
-								multiple
-								class={ form.SelectClass(false, true) }
-								{ modelAttrs(s.ID)... }
+							<label class={ form.LabelClass }>{ s.Label }</label>
+							<div
+								class={ msWrapper }
+								x-on:click.outside={ closeDropdownExpr(s.ID) }
 							>
-								<template { xForOpts(s.ID)... }>
-									<option x-bind:value="opt" x-text="opt" { xBindSelected(s.ID)... }></option>
-								</template>
-							</select>
+								<!-- trigger / selected tags -->
+								<div
+									class={ msTrigger }
+									x-on:click={ toggleDropdownExpr(s.ID) }
+								>
+									<template { xForSelected(s.ID)... }>
+										<span class={ msTag }>
+											<span x-text="tag"></span>
+											<span
+												class={ msTagRemove }
+												x-on:click.stop={ removeTagExpr(s.ID) }
+											>&times;</span>
+										</span>
+									</template>
+									<span
+										x-show={ s.ID + ".length === 0" }
+										class={ msPlaceholder }
+									>Select...</span>
+								</div>
+								<!-- dropdown list -->
+								<div
+									{ xShowDropdown(s.ID)... }
+									x-cloak
+									x-transition.opacity
+									class={ msDropdown }
+								>
+									<template { xForOpts(s.ID)... }>
+										<div
+											class={ msOption }
+											x-on:click={ toggleExpr(s.ID) }
+										>
+											<input
+												type="checkbox"
+												class={ msCheckbox }
+												x-bind:checked={ isCheckedExpr(s.ID) }
+											/>
+											<span x-text="opt"></span>
+										</div>
+									</template>
+								</div>
+							</div>
 						</div>
 					}
 				</div>

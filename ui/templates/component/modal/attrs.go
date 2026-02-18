@@ -37,7 +37,7 @@ func hxMethod(m Method, url string) templ.Attributes {
 	return templ.Attributes{key: url}
 }
 
-// xForOpts returns the Alpine x-for attribute to iterate over async select options.
+// xForOpts returns the Alpine x-for attribute for iterating async select options.
 //
 //	<template { xForOpts("permissions")... }>
 //	  → x-for="opt in permissions_opts"
@@ -45,11 +45,43 @@ func xForOpts(id string) templ.Attributes {
 	return templ.Attributes{"x-for": "opt in " + id + "_opts"}
 }
 
-// xBindSelected returns the Alpine x-bind:selected expression
-// that checks whether the option is in the current selection array.
+// xForSelected returns the Alpine x-for attribute for iterating selected values.
 //
-//	<option { xBindSelected("permissions")... }>
-//	  → x-bind:selected="permissions.includes(opt)"
-func xBindSelected(id string) templ.Attributes {
-	return templ.Attributes{"x-bind:selected": id + ".includes(opt)"}
+//	<template { xForSelected("permissions")... }>
+//	  → x-for="tag in permissions"
+func xForSelected(id string) templ.Attributes {
+	return templ.Attributes{"x-for": "tag in " + id}
+}
+
+// xShowDropdown returns Alpine x-show bound to the dropdown open state.
+//
+//	<div { xShowDropdown("permissions")... }>
+//	  → x-show="permissions_open"
+func xShowDropdown(id string) templ.Attributes {
+	return templ.Attributes{"x-show": id + "_open"}
+}
+
+// toggleExpr returns the Alpine expression to toggle a select item.
+func toggleExpr(id string) string {
+	return id + ".includes(opt) ? " + id + " = " + id + ".filter(x => x !== opt) : " + id + ".push(opt)"
+}
+
+// removeTagExpr returns the Alpine expression to remove a tag from the selection.
+func removeTagExpr(id string) string {
+	return id + " = " + id + ".filter(x => x !== tag)"
+}
+
+// isCheckedExpr returns the Alpine x-bind:checked expression.
+func isCheckedExpr(id string) string {
+	return id + ".includes(opt)"
+}
+
+// toggleDropdownExpr returns the expression to toggle the dropdown open/close.
+func toggleDropdownExpr(id string) string {
+	return id + "_open = !" + id + "_open"
+}
+
+// closeDropdownExpr returns the expression to close the dropdown.
+func closeDropdownExpr(id string) string {
+	return id + "_open = false"
 }
