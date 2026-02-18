@@ -88,10 +88,14 @@ templ Identity(u v1.User, p policy.UserDetail) {
 			}
 
 			if p.CanEdit {
-				@button.Link("", routepath.PageUserDeleteByID(u.ID), false, button.VariantDanger) {
-					<span> </span>
+				<button
+					type="button"
+					class="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-card text-fg border border-border shadow-sm hover:border-primary/40 hover:shadow-md active:shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+					x-data
+					x-on:click={ modal.OpenEvent("password-user") }
+				>
 					@asset.Icon("password")
-				}
+				</button>
 			}
 		}
 	}
@@ -115,6 +119,11 @@ templ Identity(u v1.User, p policy.UserDetail) {
 			routepath.ApiUserCrudOp(u.ID),
 			editFields(u),
 			editSelects(u),
+		)
+		@modal.Password(
+			"password-user",
+			"Set password",
+			routepath.ApiUserPassword(u.ID),
 		)
 	}
 }

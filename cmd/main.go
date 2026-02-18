@@ -17,6 +17,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/server"
 	"github.com/soltiHQ/control-plane/internal/server/runner/httpserver"
 	"github.com/soltiHQ/control-plane/internal/service/access"
+	"github.com/soltiHQ/control-plane/internal/service/credential"
 	"github.com/soltiHQ/control-plane/internal/service/session"
 	"github.com/soltiHQ/control-plane/internal/service/user"
 	"github.com/soltiHQ/control-plane/internal/storage/inmemory"
@@ -50,9 +51,10 @@ func main() {
 	)
 
 	var (
-		authSVC    = access.New(authModel, store)
-		userSVC    = user.New(store, logger)
-		sessionSVC = session.New(store, logger)
+		authSVC       = access.New(authModel, store)
+		userSVC       = user.New(store, logger)
+		sessionSVC    = session.New(store, logger)
+		credentialSVC = credential.New(store, logger)
 	)
 
 	var (
@@ -61,7 +63,7 @@ func main() {
 	)
 	var (
 		uiHandler     = handler.NewUI(logger, authSVC)
-		apiHandler    = handler.NewAPI(logger, userSVC, authSVC, sessionSVC)
+		apiHandler    = handler.NewAPI(logger, userSVC, authSVC, sessionSVC, credentialSVC)
 		staticHandler = handler.NewStatic(logger)
 	)
 	authMW := middleware.Auth(authModel.Verifier, authModel.Session)

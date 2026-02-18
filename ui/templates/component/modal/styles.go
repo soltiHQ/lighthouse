@@ -76,3 +76,6 @@ const msOption = "flex items-center gap-2 " +
 const msCheckbox = "w-4 h-4 rounded " +
 	"border border-input " +
 	"accent-primary pointer-events-none "
+
+// Password modal styles.
+const passwordError = "text-sm text-danger font-medium "

@@ -121,6 +121,41 @@ func editableFieldIDs(fields []Field) []string {
 	return ids
 }
 
+// passwordFormData returns the Alpine x-data expression for the password modal.
+func passwordFormData() string {
+	return `{ password: "", confirm: "", error: "", submitting: false }`
+}
+
+// passwordSubmitExpr returns the Alpine submit expression for the password modal.
+// It validates that both fields match, then sends a POST with the password.
+func passwordSubmitExpr(action string) string {
+	return fmt.Sprintf(
+		`if (password !== confirm) { error = "Passwords do not match"; return; }
+		if (password.length === 0) { error = "Password cannot be empty"; return; }
+		error = "";
+		submitting = true;
+		fetch('%s', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'HX-Request': 'true'
+			},
+			body: JSON.stringify({ password: password })
+		}).then(r => {
+			if (r.ok) {
+				password = ""; confirm = ""; error = "";
+				show = false;
+				htmx.trigger(document.body, 'user_update');
+			} else {
+				error = "Failed to set password";
+			}
+		}).catch(() => {
+			error = "Network error";
+		}).finally(() => submitting = false)`,
+		action,
+	)
+}
+
 // submitExpr builds the Alpine x-on:submit.prevent expression
 // that collects editable fields and async selects into a JSON body and sends a PUT.
 func submitExpr(action string, fields []Field, selects []AsyncSelect) string {

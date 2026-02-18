@@ -39,4 +39,7 @@ var (
 	ApiUserSessions = func(id string) string {
 		return ApiUser + id + "/sessions"
 	}
+	ApiUserPassword = func(id string) string {
+		return ApiUser + id + "/password"
+	}
 )

@@ -17,6 +17,7 @@ import (
 	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/domain/model"
 	"github.com/soltiHQ/control-plane/internal/service/access"
+	"github.com/soltiHQ/control-plane/internal/service/credential"
 	"github.com/soltiHQ/control-plane/internal/service/session"
 	"github.com/soltiHQ/control-plane/internal/service/user"
 	"github.com/soltiHQ/control-plane/internal/storage"
@@ -46,10 +47,11 @@ const (
 
 // API handlers.
 type API struct {
-	logger     zerolog.Logger
-	accessSVC  *access.Service
-	userSVC    *user.Service
-	sessionSVC *session.Service
+	logger        zerolog.Logger
+	accessSVC     *access.Service
+	userSVC       *user.Service
+	sessionSVC    *session.Service
+	credentialSVC *credential.Service
 }
 
 // NewAPI creates a new API handler.
@@ -58,6 +60,7 @@ func NewAPI(
 	userSVC *user.Service,
 	accessSVC *access.Service,
 	sessionSVC *session.Service,
+	credentialSVC *credential.Service,
 ) *API {
 	if accessSVC == nil {
 		panic("handler.API: accessSVC is nil")
@@ -68,11 +71,15 @@ func NewAPI(
 	if sessionSVC == nil {
 		panic("handler.API: sessionSVC is nil")
 	}
+	if credentialSVC == nil {
+		panic("handler.API: credentialSVC is nil")
+	}
 	return &API{
-		logger:     logger.With().Str("handler", "api").Logger(),
-		accessSVC:  accessSVC,
-		userSVC:    userSVC,
-		sessionSVC: sessionSVC,
+		logger:        logger.With().Str("handler", "api").Logger(),
+		accessSVC:     accessSVC,
+		userSVC:       userSVC,
+		sessionSVC:    sessionSVC,
+		credentialSVC: credentialSVC,
 	}
 }
 
@@ -128,6 +135,7 @@ func (a *API) Users(w http.ResponseWriter, r *http.Request) {
 //   - GET    /api/v1/users/{id}/sessions
 //   - POST   /api/v1/users/{id}/disable
 //   - POST   /api/v1/users/{id}/enable
+//   - POST   /api/v1/users/{id}/password
 func (a *API) UsersRouter(w http.ResponseWriter, r *http.Request) {
 	var (
 		mode = response.ModeFromRequest(r)
@@ -208,6 +216,17 @@ func (a *API) UsersRouter(w http.ResponseWriter, r *http.Request) {
 		middleware.RequirePermission(kind.UsersEdit)(
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				a.userSetStatus(w, r, mode, userID, UserActive)
+			}),
+		).ServeHTTP(w, r)
+		return
+	case "password":
+		if r.Method != http.MethodPost {
+			response.NotAllowed(w, r, mode)
+			return
+		}
+		middleware.RequirePermission(kind.UsersEdit)(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				a.userSetPassword(w, r, mode, userID)
 			}),
 		).ServeHTTP(w, r)
 		return
@@ -503,6 +522,35 @@ func (a *API) userSetStatus(w http.ResponseWriter, r *http.Request, mode httpctx
 		response.Unavailable(w, r, mode)
 		return
 	}
+	w.Header().Set(trigger.Header, trigger.UserUpdate)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *API) userSetPassword(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, userID string) {
+	var in v1.SetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		response.BadRequest(w, r, mode)
+		return
+	}
+	if in.Password == "" {
+		response.BadRequest(w, r, mode)
+		return
+	}
+
+	err := a.credentialSVC.SetPassword(r.Context(), credential.SetPasswordRequest{
+		UserID:     userID,
+		Password:   in.Password,
+		VerifierID: "ver-" + userID,
+	})
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			response.NotFound(w, r, mode)
+			return
+		}
+		response.Unavailable(w, r, mode)
+		return
+	}
+
 	w.Header().Set(trigger.Header, trigger.UserUpdate)
 	w.WriteHeader(http.StatusNoContent)
 }

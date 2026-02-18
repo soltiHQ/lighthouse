@@ -9,3 +9,8 @@ type Credential struct {
 type CredentialListResponse struct {
 	Items []Credential `json:"items"`
 }
+
+// SetPasswordRequest describes a password change request.
+type SetPasswordRequest struct {
+	Password string `json:"password"`
+}
