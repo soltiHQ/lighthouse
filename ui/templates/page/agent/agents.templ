@@ -1,0 +1,17 @@
+package agent
+
+import (
+	"github.com/soltiHQ/control-plane/internal/ui/policy"
+	"github.com/soltiHQ/control-plane/ui/templates/layout"
+)
+
+templ Agents(nav policy.Nav) {
+	@layout.App("Agents", "agents", nav) {
+		<div class="space-y-6">
+			<h1 class="text-2xl font-bold text-fg">
+				Agents
+			</h1>
+			<p class="text-fg-subtle">Hello world</p>
+		</div>
+	}
+}

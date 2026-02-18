@@ -18,6 +18,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/transportctx"
 	"github.com/soltiHQ/control-plane/internal/ui/policy"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
+	pageAgent "github.com/soltiHQ/control-plane/ui/templates/page/agent"
 	pageHome "github.com/soltiHQ/control-plane/ui/templates/page/home"
 	pageSystem "github.com/soltiHQ/control-plane/ui/templates/page/system"
 	pageUser "github.com/soltiHQ/control-plane/ui/templates/page/user"
@@ -47,6 +48,7 @@ func (u *UI) Routes(mux *http.ServeMux, auth route.BaseMW, perm route.PermMW, co
 
 	route.HandleFunc(mux, routepath.PageUsers, u.Users, append(common, auth)...)
 	route.HandleFunc(mux, routepath.PageUserInfo, u.UserDetail, append(common, auth, perm(kind.UsersGet))...)
+	route.HandleFunc(mux, routepath.PageAgents, u.Agents, append(common, auth)...)
 	route.HandleFunc(mux, routepath.PageHome, u.Main, append(common, auth)...)
 }
 
@@ -148,6 +150,13 @@ func (u *UI) Main(w http.ResponseWriter, r *http.Request) {
 func (u *UI) Users(w http.ResponseWriter, r *http.Request) {
 	u.page(w, r, http.MethodGet, routepath.PageUsers, func(nav policy.Nav) templ.Component {
 		return pageUser.Users(nav)
+	})
+}
+
+// Agents handle GET /agents.
+func (u *UI) Agents(w http.ResponseWriter, r *http.Request) {
+	u.page(w, r, http.MethodGet, routepath.PageAgents, func(nav policy.Nav) templ.Component {
+		return pageAgent.Agents(nav)
 	})
 }
 

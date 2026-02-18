@@ -5,6 +5,7 @@ const (
 	PageLogin      = "/login"
 	PageLogout     = "/logout"
 	PageUsers      = "/users"
+	PageAgents     = "/agents"
 	PageUserInfo   = "/users/info/"
 	PageUserDelete = "/users/delete/"
 	PageUserEdit   = "/users/edit/"
