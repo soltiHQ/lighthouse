@@ -33,8 +33,4 @@ message SyncRequest {
 message SyncResponse {
   // Indicates success or failure.
   bool success = 1;
-  // Additional response message.
-  string message = 2;
-  // Response metadata.
-  map<string, string> metadata = 3;
 }

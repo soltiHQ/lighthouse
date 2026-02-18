@@ -25,6 +25,5 @@ type AgentPatchLabelsRequest struct {
 
 // AgentSyncResponse is the response for the discovery sync endpoint.
 type AgentSyncResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
+	Success bool `json:"success"`
 }
