@@ -113,13 +113,23 @@ templ Identity(u v1.User, p policy.UserDetail) {
 	}
 
 	if p.CanEdit {
-		@modal.Edit(
-			"edit-user",
-			"Edit user",
-			routepath.ApiUserCrudOp(u.ID),
-			editFields(u),
-			editSelects(u),
-		)
+		if p.CanEditRoles {
+			@modal.Edit(
+				"edit-user",
+				"Edit user",
+				routepath.ApiUserCrudOp(u.ID),
+				editFields(u),
+				editSelects(u),
+			)
+		} else {
+			@modal.Edit(
+				"edit-user",
+				"Edit user",
+				routepath.ApiUserCrudOp(u.ID),
+				editFields(u),
+				nil,
+			)
+		}
 		@modal.Password(
 			"password-user",
 			"Set password",

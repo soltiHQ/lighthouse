@@ -401,7 +401,7 @@ func (a *API) usersDetails(w http.ResponseWriter, r *http.Request, mode httpctx.
 	apiUser := apimap.User(u)
 	response.OK(w, r, mode, &responder.View{
 		Data:      apiUser,
-		Component: contentUser.Detail(apiUser, policy.BuildUserDetail(identity)),
+		Component: contentUser.Detail(apiUser, policy.BuildUserDetail(identity, id)),
 	})
 }
 

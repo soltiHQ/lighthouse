@@ -4,19 +4,25 @@ import "github.com/soltiHQ/control-plane/internal/auth/identity"
 
 // UserDetail is a UI-oriented policy for the user detail page.
 type UserDetail struct {
-	CanEdit   bool // edit button, enable/disable, password
-	CanDelete bool // delete button
+	IsSelf       bool // viewing own profile
+	CanEdit      bool // edit basic fields, enable/disable, password
+	CanEditRoles bool // edit roles & permissions (false for self)
+	CanDelete    bool // delete button (false for self)
 }
 
 // BuildUserDetail derives UI action flags from the authenticated identity.
-func BuildUserDetail(id *identity.Identity) UserDetail {
+// targetUserID is the ID of the user being viewed.
+func BuildUserDetail(id *identity.Identity, targetUserID string) UserDetail {
 	if id == nil {
 		return UserDetail{}
 	}
 
 	perms := permSet(id)
+	self := id.UserID == targetUserID
 	return UserDetail{
-		CanEdit:   hasAny(perms, usersEdit),
-		CanDelete: hasAny(perms, usersDelete),
+		IsSelf:       self,
+		CanEdit:      hasAny(perms, usersEdit),
+		CanEditRoles: hasAny(perms, usersEdit) && !self,
+		CanDelete:    hasAny(perms, usersDelete) && !self,
 	}
 }
