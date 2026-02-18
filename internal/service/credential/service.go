@@ -103,12 +103,14 @@ func (s *Service) SetPassword(ctx context.Context, req SetPasswordRequest) error
 	if credID == "" {
 		existing, err := s.store.GetCredentialByUserAndAuth(ctx, req.UserID, kind.Password)
 		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				return storage.ErrInvalidArgument
+			if !errors.Is(err, storage.ErrNotFound) {
+				return err
 			}
-			return err
+			// No password credential yet — generate a new ID.
+			credID = "cred-" + req.UserID
+		} else {
+			credID = existing.ID()
 		}
-		credID = existing.ID()
 	}
 
 	cred, err := model.NewCredential(credID, req.UserID, kind.Password)

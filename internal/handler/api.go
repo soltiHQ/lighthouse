@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/segmentio/ksuid"
 	"github.com/soltiHQ/control-plane/internal/transport/httpctx"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/internal/ui/trigger"
@@ -436,11 +437,11 @@ func (a *API) userUpsert(w http.ResponseWriter, r *http.Request, mode httpctx.Re
 
 	switch action {
 	case UserCreate:
-		if in.ID == "" || in.Subject == "" {
+		if in.Subject == "" {
 			response.BadRequest(w, r, mode)
 			return
 		}
-		x, err := model.NewUser(in.ID, in.Subject)
+		x, err := model.NewUser(ksuid.New().String(), in.Subject)
 		if err != nil {
 			response.BadRequest(w, r, mode)
 			return
@@ -486,6 +487,10 @@ func (a *API) userUpsert(w http.ResponseWriter, r *http.Request, mode httpctx.Re
 	if err := a.userSVC.Upsert(r.Context(), u); err != nil {
 		response.Unavailable(w, r, mode)
 		return
+	}
+
+	if action == UserCreate {
+		trigger.Redirect(w, routepath.PageUsers)
 	}
 	w.Header().Set(trigger.Header, trigger.UserUpdate)
 	w.WriteHeader(http.StatusNoContent)

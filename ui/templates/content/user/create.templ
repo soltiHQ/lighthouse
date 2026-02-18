@@ -1,0 +1,16 @@
+package user
+
+import (
+	"github.com/soltiHQ/control-plane/internal/ui/routepath"
+	"github.com/soltiHQ/control-plane/ui/templates/component/modal"
+)
+
+templ CreateModal() {
+	@modal.Create(
+		"create-user",
+		"Add user",
+		routepath.ApiUsers,
+		createFields(),
+		nil,
+	)
+}
