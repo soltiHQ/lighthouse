@@ -6,6 +6,7 @@ const (
 	PageLogout     = "/logout"
 	PageUsers      = "/users"
 	PageAgents     = "/agents"
+	PageAgentInfo  = "/agents/info/"
 	PageUserInfo   = "/users/info/"
 	PageUserDelete = "/users/delete/"
 	PageUserEdit   = "/users/edit/"
@@ -15,6 +16,7 @@ const (
 	ApiUser        = "/api/v1/users/"
 	ApiUsers       = "/api/v1/users"
 	ApiAgents      = "/api/v1/agents"
+	ApiAgent       = "/api/v1/agents/"
 	ApiPermissions = "/api/v1/permissions"
 	ApiRoles       = "/api/v1/roles"
 )
@@ -25,6 +27,10 @@ var (
 	PageUserInfoByID   = func(id string) string {
 		return PageUserInfo + id
 	}
+
+	PageAgentInfoByID = func(id string) string { return PageAgentInfo + id }
+	ApiAgentByID      = func(id string) string { return ApiAgent + id }
+	ApiAgentLabels    = func(id string) string { return ApiAgent + id + "/labels" }
 
 	ApiUserRevokeSession = func(id string) string {
 		return ApiSession + id + "/revoke"

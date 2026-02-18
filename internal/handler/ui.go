@@ -49,6 +49,7 @@ func (u *UI) Routes(mux *http.ServeMux, auth route.BaseMW, perm route.PermMW, co
 	route.HandleFunc(mux, routepath.PageUsers, u.Users, append(common, auth)...)
 	route.HandleFunc(mux, routepath.PageUserInfo, u.UserDetail, append(common, auth, perm(kind.UsersGet))...)
 	route.HandleFunc(mux, routepath.PageAgents, u.Agents, append(common, auth)...)
+	route.HandleFunc(mux, routepath.PageAgentInfo, u.AgentDetail, append(common, auth, perm(kind.AgentsGet))...)
 	route.HandleFunc(mux, routepath.PageHome, u.Main, append(common, auth)...)
 }
 
@@ -157,6 +158,13 @@ func (u *UI) Users(w http.ResponseWriter, r *http.Request) {
 func (u *UI) Agents(w http.ResponseWriter, r *http.Request) {
 	u.page(w, r, http.MethodGet, routepath.PageAgents, func(nav policy.Nav) templ.Component {
 		return pageAgent.Agents(nav)
+	})
+}
+
+// AgentDetail handle GET /agents/info/{}.
+func (u *UI) AgentDetail(w http.ResponseWriter, r *http.Request) {
+	u.pageParam(w, r, http.MethodGet, routepath.PageAgentInfo, func(nav policy.Nav, agentID string) templ.Component {
+		return pageAgent.Detail(nav, agentID)
 	})
 }
 

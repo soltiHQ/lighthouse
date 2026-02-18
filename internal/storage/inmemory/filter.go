@@ -47,6 +47,30 @@ func (f *AgentFilter) ByArch(arch string) *AgentFilter {
 	return f
 }
 
+// Query matches agents by id/name/endpoint (case-insensitive substring).
+func (f *AgentFilter) Query(q string) *AgentFilter {
+	q = strings.ToLower(strings.TrimSpace(q))
+	if q == "" {
+		return f
+	}
+	f.predicates = append(f.predicates, func(a *model.Agent) bool {
+		if a == nil {
+			return false
+		}
+		if strings.Contains(strings.ToLower(a.ID()), q) {
+			return true
+		}
+		if strings.Contains(strings.ToLower(a.Name()), q) {
+			return true
+		}
+		if strings.Contains(strings.ToLower(a.Endpoint()), q) {
+			return true
+		}
+		return false
+	})
+	return f
+}
+
 // Matches reports whether the given agent satisfies all predicates.
 func (f *AgentFilter) Matches(a *model.Agent) bool {
 	for _, pred := range f.predicates {

@@ -8,6 +8,7 @@ const (
 
 	UserUpdate        = "user_update"
 	UserSessionUpdate = "user_session_update"
+	AgentUpdate       = "agent_update"
 )
 
 const (

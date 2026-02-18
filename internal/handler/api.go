@@ -99,6 +99,7 @@ func (a *API) Routes(mux *http.ServeMux, auth route.BaseMW, _ route.PermMW, comm
 	route.HandleFunc(mux, routepath.ApiUser, a.UsersRouter, append(common, auth)...)
 	route.HandleFunc(mux, routepath.ApiSession, a.SessionsRouter, append(common, auth)...)
 	route.HandleFunc(mux, routepath.ApiAgents, a.Agents, append(common, auth)...)
+	route.HandleFunc(mux, routepath.ApiAgent, a.AgentsRouter, append(common, auth)...)
 	route.HandleFunc(mux, routepath.ApiPermissions, a.Permissions, append(common, auth)...)
 	route.HandleFunc(mux, routepath.ApiRoles, a.Roles, append(common, auth)...)
 }
@@ -306,6 +307,64 @@ func (a *API) Agents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// AgentsRouter handles /api/v1/agents/{id} and subroutes.
+//
+// Supported:
+//   - GET  /api/v1/agents/{id}
+//   - PUT  /api/v1/agents/{id}/labels
+func (a *API) AgentsRouter(w http.ResponseWriter, r *http.Request) {
+	var (
+		mode = response.ModeFromRequest(r)
+		rest = strings.Trim(strings.TrimPrefix(r.URL.Path, routepath.ApiAgent), "/")
+	)
+	if rest == "" {
+		response.NotFound(w, r, mode)
+		return
+	}
+
+	agentID, tail, _ := strings.Cut(rest, "/")
+	if agentID == "" {
+		response.NotFound(w, r, mode)
+		return
+	}
+
+	if tail == "" {
+		if r.Method != http.MethodGet {
+			response.NotAllowed(w, r, mode)
+			return
+		}
+		middleware.RequirePermission(kind.AgentsGet)(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				a.agentDetails(w, r, mode, agentID)
+			}),
+		).ServeHTTP(w, r)
+		return
+	}
+
+	action, extra, _ := strings.Cut(tail, "/")
+	if extra != "" {
+		response.NotFound(w, r, mode)
+		return
+	}
+
+	switch action {
+	case "labels":
+		if r.Method != http.MethodPut {
+			response.NotAllowed(w, r, mode)
+			return
+		}
+		middleware.RequirePermission(kind.AgentsEdit)(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				a.agentPatchLabels(w, r, mode, agentID)
+			}),
+		).ServeHTTP(w, r)
+		return
+	default:
+		response.NotFound(w, r, mode)
+		return
+	}
+}
+
 // Permissions handles /api/v1/permissions.
 //
 // Supported:
@@ -380,17 +439,24 @@ func (a *API) rolesList(w http.ResponseWriter, r *http.Request, mode httpctx.Ren
 func (a *API) agentList(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
 	var (
 		limit  int
+		filter storage.AgentFilter
+
 		cursor = r.URL.Query().Get("cursor")
+		q      = r.URL.Query().Get("q")
 	)
 	if raw := r.URL.Query().Get("limit"); raw != "" {
 		if n, err := strconv.Atoi(raw); err == nil {
 			limit = n
 		}
 	}
+	if q != "" {
+		filter = inmemory.NewAgentFilter().Query(q)
+	}
 
 	res, err := a.agentSVC.List(r.Context(), agent.ListQuery{
 		Limit:  limit,
 		Cursor: cursor,
+		Filter: filter,
 	})
 	if err != nil {
 		response.Unavailable(w, r, mode)
@@ -409,8 +475,53 @@ func (a *API) agentList(w http.ResponseWriter, r *http.Request, mode httpctx.Ren
 			Items:      items,
 			NextCursor: res.NextCursor,
 		},
-		Component: contentAgent.List(res.Items, res.NextCursor),
+		Component: contentAgent.List(res.Items, res.NextCursor, q),
 	})
+}
+
+func (a *API) agentDetails(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, id string) {
+	ag, err := a.agentSVC.Get(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			response.NotFound(w, r, mode)
+			return
+		}
+		response.Unavailable(w, r, mode)
+		return
+	}
+
+	identity, _ := transportctx.Identity(r.Context())
+	apiAgent := apimap.Agent(ag)
+	response.OK(w, r, mode, &responder.View{
+		Data:      apiAgent,
+		Component: contentAgent.Detail(apiAgent, policy.BuildAgentDetail(identity)),
+	})
+}
+
+func (a *API) agentPatchLabels(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, id string) {
+	// The Edit modal sends flat JSON { key: value, key: value }.
+	// We interpret the entire body as the new labels map.
+	var labels map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&labels); err != nil {
+		response.BadRequest(w, r, mode)
+		return
+	}
+
+	_, err := a.agentSVC.PatchLabels(r.Context(), agent.PatchLabels{
+		ID:     id,
+		Labels: labels,
+	})
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			response.NotFound(w, r, mode)
+			return
+		}
+		response.Unavailable(w, r, mode)
+		return
+	}
+
+	w.Header().Set(trigger.Header, trigger.AgentUpdate)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (a *API) userList(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {

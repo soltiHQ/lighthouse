@@ -1,0 +1,17 @@
+package agent
+
+import "github.com/soltiHQ/control-plane/ui/templates/component/card"
+
+templ Tasks() {
+	@card.Card("") {
+		@card.CardHeader() {
+			<h2 class="text-[11px] font-mono uppercase tracking-[0.14em] text-muted select-none">
+				Tasks
+			</h2>
+		}
+
+		@card.CardBody() {
+			<p class="text-sm text-muted">No tasks yet.</p>
+		}
+	}
+}
