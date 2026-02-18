@@ -19,23 +19,11 @@ func BuildNav(id *identity.Identity) Nav {
 		return Nav{}
 	}
 
-	perms := make(map[kind.Permission]struct{}, len(id.Permissions))
-	for _, p := range id.Permissions {
-		perms[p] = struct{}{}
-	}
+	perms := permSet(id)
 	return Nav{
 		ShowAgents: hasAny(perms, kind.AgentsGet, kind.AgentsEdit),
 		ShowUsers:  hasAny(perms, kind.UsersGet, kind.UsersAdd, kind.UsersEdit, kind.UsersDelete),
 		ShowTasks:  true,
 		CanAddUser: hasAny(perms, kind.UsersAdd),
 	}
-}
-
-func hasAny(set map[kind.Permission]struct{}, wants ...kind.Permission) bool {
-	for _, w := range wants {
-		if _, ok := set[w]; ok {
-			return true
-		}
-	}
-	return false
 }

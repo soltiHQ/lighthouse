@@ -26,6 +26,8 @@ import (
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
 	"github.com/soltiHQ/control-plane/internal/transport/http/route"
+	"github.com/soltiHQ/control-plane/internal/transportctx"
+	"github.com/soltiHQ/control-plane/internal/ui/policy"
 	contentUser "github.com/soltiHQ/control-plane/ui/templates/content/user"
 )
 
@@ -375,10 +377,11 @@ func (a *API) usersDetails(w http.ResponseWriter, r *http.Request, mode httpctx.
 		return
 	}
 
+	identity, _ := transportctx.Identity(r.Context())
 	apiUser := apimap.User(u)
 	response.OK(w, r, mode, &responder.View{
 		Data:      apiUser,
-		Component: contentUser.Detail(apiUser),
+		Component: contentUser.Detail(apiUser, policy.BuildUserDetail(identity)),
 	})
 }
 

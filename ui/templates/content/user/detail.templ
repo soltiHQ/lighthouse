@@ -2,6 +2,7 @@ package user
 
 import (
 	v1 "github.com/soltiHQ/control-plane/api/v1"
+	"github.com/soltiHQ/control-plane/internal/ui/policy"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/ui/templates/asset"
 	"github.com/soltiHQ/control-plane/ui/templates/component/button"
@@ -11,11 +12,11 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
-templ Detail(apiUser v1.User) {
-	@Identity(apiUser)
+templ Detail(apiUser v1.User, p policy.UserDetail) {
+	@Identity(apiUser, p)
 }
 
-templ Identity(u v1.User) {
+templ Identity(u v1.User, p policy.UserDetail) {
 	@card.Card("") {
 		@card.CardBody() {
 			<div class="space-y-6">
@@ -48,62 +49,74 @@ templ Identity(u v1.User) {
 		}
 
 		@card.CardFooter() {
-			if u.Disabled {
-				<form hx-post={ routepath.ApiUserEnable(u.ID) } hx-swap="none">
-					@button.Button("", "submit", false, button.VariantSecondary, false) {
-						<span> </span>
-						@asset.Icon("enable")
-					}
-				</form>
-			} else {
-				<form hx-post={ routepath.ApiUserDisable(u.ID) } hx-swap="none">
-					@button.Button("", "submit", false, button.VariantSecondary, false) {
-				        <span> </span>
-						@asset.Icon("disable")
-					}
-				</form>
+			if p.CanEdit {
+				if u.Disabled {
+					<form hx-post={ routepath.ApiUserEnable(u.ID) } hx-swap="none">
+						@button.Button("", "submit", false, button.VariantSecondary, false) {
+							<span> </span>
+							@asset.Icon("enable")
+						}
+					</form>
+				} else {
+					<form hx-post={ routepath.ApiUserDisable(u.ID) } hx-swap="none">
+						@button.Button("", "submit", false, button.VariantSecondary, false) {
+							<span> </span>
+							@asset.Icon("disable")
+						}
+					</form>
+				}
+
+				<button
+					type="button"
+					class="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-card text-fg border border-border shadow-sm hover:border-primary/40 hover:shadow-md active:shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+					x-data
+					x-on:click={ modal.OpenEvent("edit-user") }
+				>
+					@asset.Icon("edit")
+				</button>
 			}
 
-			<button
-				type="button"
-				class="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-card text-fg border border-border shadow-sm hover:border-primary/40 hover:shadow-md active:shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-				x-data
-				x-on:click={ modal.OpenEvent("edit-user") }
-			>
-				@asset.Icon("edit")
-			</button>
-			<button
-				type="button"
-				class="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-danger text-white hover:bg-danger/90 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
-				x-data
-				x-on:click={ modal.OpenEvent("delete-user") }
-			>
-				@asset.Icon("delete")
-			</button>
-			@button.Link("", routepath.PageUserDeleteByID(u.ID), false, button.VariantDanger) {
-                <span> </span>
-            	@asset.Icon("password")
-            }
+			if p.CanDelete {
+				<button
+					type="button"
+					class="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-danger text-white hover:bg-danger/90 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
+					x-data
+					x-on:click={ modal.OpenEvent("delete-user") }
+				>
+					@asset.Icon("delete")
+				</button>
+			}
+
+			if p.CanEdit {
+				@button.Link("", routepath.PageUserDeleteByID(u.ID), false, button.VariantDanger) {
+					<span> </span>
+					@asset.Icon("password")
+				}
+			}
 		}
 	}
 
-	@modal.Confirm(
-		"delete-user",
-		"Delete user",
-		"Are you sure you want to delete "+u.Subject+"? This action cannot be undone.",
-		"Delete",
-		routepath.ApiUserCrudOp(u.ID),
-		modal.MethodDelete,
-		modal.VariantDanger,
-	)
+	if p.CanDelete {
+		@modal.Confirm(
+			"delete-user",
+			"Delete user",
+			"Are you sure you want to delete "+u.Subject+"? This action cannot be undone.",
+			"Delete",
+			routepath.ApiUserCrudOp(u.ID),
+			modal.MethodDelete,
+			modal.VariantDanger,
+		)
+	}
 
-	@modal.Edit(
-		"edit-user",
-		"Edit user",
-		routepath.ApiUserCrudOp(u.ID),
-		editFields(u),
-		editSelects(u),
-	)
+	if p.CanEdit {
+		@modal.Edit(
+			"edit-user",
+			"Edit user",
+			routepath.ApiUserCrudOp(u.ID),
+			editFields(u),
+			editSelects(u),
+		)
+	}
 }
 
 templ metaBadges(label string, items []string, variant visual.Variant, copy bool) {
