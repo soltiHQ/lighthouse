@@ -105,10 +105,10 @@ func (u *UI) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		case errors.Is(err, auth.ErrInvalidCredentials),
 			errors.Is(err, auth.ErrInvalidRequest):
-			http.Redirect(w, r, routepath.PageLogin, http.StatusFound)
+			http.Redirect(w, r, routepath.PageLogin+"?error=Invalid+username+or+password", http.StatusFound)
 			return
 		default:
-			http.Redirect(w, r, routepath.PageLogin, http.StatusFound)
+			http.Redirect(w, r, routepath.PageLogin+"?error=Something+went+wrong", http.StatusFound)
 			return
 		}
 	}
