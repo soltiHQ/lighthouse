@@ -39,9 +39,24 @@ const selectArrow = "appearance-none pr-10 " +
 	"stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E" +
 	"%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22/%3E%3C/svg%3E')] "
 
+const selectMultiple = "appearance-none py-2 "
+
 // SelectClass returns the full Tailwind class string for a select.
-func SelectClass(hasErr bool) string {
-	base := baseInput + selectArrow
+// For multiple selects the custom arrow is omitted and height is auto.
+func SelectClass(hasErr bool, multiple bool) string {
+	base := "block w-full px-4 " +
+		"rounded-[var(--r-6)] " +
+		"bg-card text-fg " +
+		"placeholder:text-muted-strong " +
+		"outline-none transition-colors " +
+		"disabled:opacity-50 disabled:pointer-events-none "
+
+	if multiple {
+		base += selectMultiple
+	} else {
+		base += "h-11 " + selectArrow
+	}
+
 	if hasErr {
 		return base + errBorder
 	}

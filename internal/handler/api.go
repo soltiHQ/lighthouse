@@ -80,6 +80,7 @@ func (a *API) Routes(mux *http.ServeMux, auth route.BaseMW, _ route.PermMW, comm
 	route.HandleFunc(mux, routepath.ApiUsers, a.Users, append(common, auth)...)
 	route.HandleFunc(mux, routepath.ApiUser, a.UsersRouter, append(common, auth)...)
 	route.HandleFunc(mux, routepath.ApiSession, a.SessionsRouter, append(common, auth)...)
+	route.HandleFunc(mux, routepath.ApiPermissions, a.Permissions, append(common, auth)...)
 }
 
 // Users handles /api/v1/users.
@@ -246,6 +247,25 @@ func (a *API) SessionsRouter(w http.ResponseWriter, r *http.Request) {
 			a.userRevokeSession(w, r, mode, sessID)
 		}),
 	).ServeHTTP(w, r)
+}
+
+// Permissions handles GET /api/v1/permissions.
+func (a *API) Permissions(w http.ResponseWriter, r *http.Request) {
+	mode := response.ModeFromRequest(r)
+	if r.Method != http.MethodGet {
+		response.NotAllowed(w, r, mode)
+		return
+	}
+
+	perms := a.accessSVC.GetPermissions()
+	items := make([]string, len(perms))
+	for i, p := range perms {
+		items[i] = string(p)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string][]string{"items": items})
 }
 
 func (a *API) userList(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {

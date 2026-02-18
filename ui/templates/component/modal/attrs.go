@@ -36,3 +36,20 @@ func hxMethod(m Method, url string) templ.Attributes {
 	}
 	return templ.Attributes{key: url}
 }
+
+// xForOpts returns the Alpine x-for attribute to iterate over async select options.
+//
+//	<template { xForOpts("permissions")... }>
+//	  → x-for="opt in permissions_opts"
+func xForOpts(id string) templ.Attributes {
+	return templ.Attributes{"x-for": "opt in " + id + "_opts"}
+}
+
+// xBindSelected returns the Alpine x-bind:selected expression
+// that checks whether the option is in the current selection array.
+//
+//	<option { xBindSelected("permissions")... }>
+//	  → x-bind:selected="permissions.includes(opt)"
+func xBindSelected(id string) templ.Attributes {
+	return templ.Attributes{"x-bind:selected": id + ".includes(opt)"}
+}

@@ -18,20 +18,12 @@ type Field struct {
 	Disabled    bool // rendered as read-only, excluded from submission
 }
 
-// editFormData builds the Alpine x-data expression.
-//
-//	{ subject: "admin", name: "Admin", email: "", submitting: false }
-func editFormData(fields []Field) string {
-	parts := make([]string, 0, len(fields)+1)
-	for _, f := range fields {
-		if f.Disabled {
-			continue
-		}
-		v, _ := json.Marshal(f.Value)
-		parts = append(parts, fmt.Sprintf("%s: %s", f.ID, string(v)))
-	}
-	parts = append(parts, "submitting: false")
-	return "{ " + strings.Join(parts, ", ") + " }"
+// AsyncSelect describes a multi-select field whose options are loaded from an API.
+type AsyncSelect struct {
+	ID       string   // JSON field name (e.g. "permissions")
+	Label    string
+	Endpoint string   // GET URL that returns { "items": [...] }
+	Selected []string // currently selected values
 }
 
 // disabledAttrs returns templ.Attributes for a disabled input.
@@ -42,6 +34,51 @@ func disabledAttrs() templ.Attributes {
 // modelAttrs returns templ.Attributes with x-model bound to the field ID.
 func modelAttrs(id string) templ.Attributes {
 	return templ.Attributes{"x-model": id}
+}
+
+// editFormData builds the Alpine x-data expression including async select state.
+//
+//	{ subject: "admin", ..., permissions: ["users:get"], permissions_opts: [], loading: true, submitting: false }
+func editFormData(fields []Field, selects []AsyncSelect) string {
+	parts := make([]string, 0, len(fields)+len(selects)*2+2)
+
+	for _, f := range fields {
+		if f.Disabled {
+			continue
+		}
+		v, _ := json.Marshal(f.Value)
+		parts = append(parts, fmt.Sprintf("%s: %s", f.ID, string(v)))
+	}
+
+	for _, s := range selects {
+		v, _ := json.Marshal(s.Selected)
+		parts = append(parts, fmt.Sprintf("%s: %s", s.ID, string(v)))
+		parts = append(parts, fmt.Sprintf("%s_opts: []", s.ID))
+	}
+
+	parts = append(parts, "loading: true")
+	parts = append(parts, "submitting: false")
+	return "{ " + strings.Join(parts, ", ") + " }"
+}
+
+// initExpr builds the Alpine init expression that fetches async select options.
+func initExpr(selects []AsyncSelect) string {
+	if len(selects) == 0 {
+		return "loading = false"
+	}
+
+	fetches := make([]string, 0, len(selects))
+	for _, s := range selects {
+		fetches = append(fetches, fmt.Sprintf(
+			`fetch('%s').then(r => r.json()).then(d => { %s_opts = d.items || [] })`,
+			s.Endpoint, s.ID,
+		))
+	}
+
+	return fmt.Sprintf(
+		`Promise.all([%s]).finally(() => loading = false)`,
+		strings.Join(fetches, ", "),
+	)
 }
 
 // editableFieldIDs returns the IDs of editable (non-disabled) fields.
@@ -56,13 +93,15 @@ func editableFieldIDs(fields []Field) []string {
 }
 
 // submitExpr builds the Alpine x-on:submit.prevent expression
-// that collects editable fields into a JSON body and sends a PUT.
-func submitExpr(action string, fields []Field) string {
-	// Build explicit JSON object: { subject: subject, name: name, email: email }
+// that collects editable fields and async selects into a JSON body and sends a PUT.
+func submitExpr(action string, fields []Field, selects []AsyncSelect) string {
 	ids := editableFieldIDs(fields)
-	pairs := make([]string, 0, len(ids))
+	pairs := make([]string, 0, len(ids)+len(selects))
 	for _, id := range ids {
 		pairs = append(pairs, fmt.Sprintf("%s: %s", id, id))
+	}
+	for _, s := range selects {
+		pairs = append(pairs, fmt.Sprintf("%s: %s", s.ID, s.ID))
 	}
 	jsonObj := "{ " + strings.Join(pairs, ", ") + " }"
 

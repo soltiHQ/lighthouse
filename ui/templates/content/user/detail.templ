@@ -102,6 +102,7 @@ templ Identity(u v1.User) {
 		"Edit user",
 		routepath.ApiUserCrudOp(u.ID),
 		editFields(u),
+		editSelects(u),
 	)
 }
 

@@ -3,13 +3,14 @@ package form
 templ Select(
 	id string,
 	options []Option,
+	multiple bool,
 	required bool,
 	errMsg string,
 	attrs ...templ.Attributes,
 ) {
 	{{
 		hasErr := errMsg != ""
-		cls := SelectClass(hasErr)
+		cls := SelectClass(hasErr, multiple)
 		extra := mergeAttrs(attrs)
 	}}
 
@@ -18,6 +19,7 @@ templ Select(
 			<select
 				id={ id }
 				name={ id }
+				multiple?={ multiple }
 				required?={ required }
 				aria-invalid="true"
 				aria-describedby={ id + "-error" }
@@ -32,6 +34,7 @@ templ Select(
 			<select
 				id={ id }
 				name={ id }
+				multiple?={ multiple }
 				required?={ required }
 				aria-invalid="false"
 				class={ cls }

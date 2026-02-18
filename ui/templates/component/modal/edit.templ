@@ -1,58 +1,83 @@
 package modal
 
-import "github.com/soltiHQ/control-plane/ui/templates/component/form"
+import (
+	"github.com/soltiHQ/control-plane/ui/templates/component/form"
+	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
+)
 
 // Edit is a pre-built edit modal with a form that sends JSON.
-//
-//   - name:         Alpine event name (e.g. "edit-user")
-//   - titleText:    heading shown in the modal
-//   - action:       URL for the PUT request
-//   - fields:       ordered list of form fields to render
+// Fields are static inputs; selects are async multi-selects loaded from API.
 templ Edit(
 	name string,
 	titleText string,
 	action string,
 	fields []Field,
+	selects []AsyncSelect,
 ) {
 	@Modal(name) {
 		<form
-			x-data={ editFormData(fields) }
-			x-on:submit.prevent={ submitExpr(action, fields) }
+			x-data={ editFormData(fields, selects) }
+			x-init={ initExpr(selects) }
+			x-on:submit.prevent={ submitExpr(action, fields, selects) }
 		>
-			<div class={ formBody }>
-				<h3 class={ title }>{ titleText }</h3>
-
-				for _, f := range fields {
-					<div>
-						<label for={ f.ID } class={ form.LabelClass }>{ f.Label }</label>
-						if f.Disabled {
-							@form.Input(
-								f.ID, "text", f.Value, f.Placeholder,
-								false, false, "",
-								disabledAttrs(),
-							)
-						} else {
-							@form.Input(
-								f.ID, "text", f.Value, f.Placeholder,
-								f.Required, false, "",
-								modelAttrs(f.ID),
-							)
-						}
-					</div>
-				}
+			<!-- preloader -->
+			<div x-show="loading" class={ formBody }>
+				@datagrid.Preload("Loading...")
 			</div>
 
-			@Footer() {
-				@CancelButton("Cancel")
-				<button
-					type="submit"
-					class={ confirmButtonStyle(VariantDefault) }
-					x-bind:disabled="submitting"
-				>
-					<span x-show="!submitting">Save</span>
-					<span x-show="submitting" x-cloak>Saving...</span>
-				</button>
-			}
+			<!-- form content -->
+			<div x-show="!loading" x-cloak>
+				<div class={ formBody }>
+					<h3 class={ title }>{ titleText }</h3>
+
+					for _, f := range fields {
+						<div>
+							<label for={ f.ID } class={ form.LabelClass }>{ f.Label }</label>
+							if f.Disabled {
+								@form.Input(
+									f.ID, "text", f.Value, f.Placeholder,
+									false, false, "",
+									disabledAttrs(),
+								)
+							} else {
+								@form.Input(
+									f.ID, "text", f.Value, f.Placeholder,
+									f.Required, false, "",
+									modelAttrs(f.ID),
+								)
+							}
+						</div>
+					}
+
+					for _, s := range selects {
+						<div>
+							<label for={ s.ID } class={ form.LabelClass }>{ s.Label }</label>
+							<select
+								id={ s.ID }
+								multiple
+								class={ form.SelectClass(false, true) }
+								{ modelAttrs(s.ID)... }
+							>
+								<template { xForOpts(s.ID)... }>
+									<option x-bind:value="opt" x-text="opt" { xBindSelected(s.ID)... }></option>
+								</template>
+							</select>
+						</div>
+					}
+				</div>
+
+				@Footer() {
+					@CancelButton("Cancel")
+					<button
+						type="submit"
+						class={ confirmButtonStyle(VariantDefault) }
+						x-bind:disabled="submitting"
+					>
+						<span x-show="!submitting">Save</span>
+						<span x-show="submitting" x-cloak>Saving...</span>
+					</button>
+				}
+			</div>
 		</form>
 	}
 }
