@@ -4,22 +4,28 @@ import (
 	"context"
 
 	"github.com/soltiHQ/control-plane/domain/kind"
+	"github.com/soltiHQ/control-plane/domain/model"
 	iauth "github.com/soltiHQ/control-plane/internal/auth"
 	"github.com/soltiHQ/control-plane/internal/auth/identity"
 	"github.com/soltiHQ/control-plane/internal/auth/wire"
+	"github.com/soltiHQ/control-plane/internal/storage"
 )
 
 // Service implements shared authentication use-cases.
 type Service struct {
-	auth *wire.Auth
+	auth  *wire.Auth
+	store storage.Storage
 }
 
 // New creates a new authentication service.
-func New(authSvc *wire.Auth) *Service {
+func New(authSvc *wire.Auth, store storage.Storage) *Service {
 	if authSvc == nil {
 		panic("access.Service: nil auth service")
 	}
-	return &Service{auth: authSvc}
+	if store == nil {
+		panic("access.Service: nil storage")
+	}
+	return &Service{auth: authSvc, store: store}
 }
 
 // Login authenticates a user and returns issued tokens and identity.
@@ -55,6 +61,15 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*identity.Identi
 // GetPermissions returns all available permissions in the system.
 func (s *Service) GetPermissions() []kind.Permission {
 	return kind.All
+}
+
+// GetRoles returns all roles from storage.
+func (s *Service) GetRoles(ctx context.Context) ([]*model.Role, error) {
+	res, err := s.store.ListRoles(ctx, nil, storage.ListOptions{Limit: 0})
+	if err != nil {
+		return nil, err
+	}
+	return res.Items, nil
 }
 
 // Logout revokes a session (idempotent / best-effort).

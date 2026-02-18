@@ -81,6 +81,7 @@ func (a *API) Routes(mux *http.ServeMux, auth route.BaseMW, _ route.PermMW, comm
 	route.HandleFunc(mux, routepath.ApiUser, a.UsersRouter, append(common, auth)...)
 	route.HandleFunc(mux, routepath.ApiSession, a.SessionsRouter, append(common, auth)...)
 	route.HandleFunc(mux, routepath.ApiPermissions, a.Permissions, append(common, auth)...)
+	route.HandleFunc(mux, routepath.ApiRoles, a.Roles, append(common, auth)...)
 }
 
 // Users handles /api/v1/users.
@@ -249,23 +250,75 @@ func (a *API) SessionsRouter(w http.ResponseWriter, r *http.Request) {
 	).ServeHTTP(w, r)
 }
 
-// Permissions handles GET /api/v1/permissions.
+// Permissions handles /api/v1/permissions.
+//
+// Supported:
+//   - GET /api/v1/permissions
 func (a *API) Permissions(w http.ResponseWriter, r *http.Request) {
 	mode := response.ModeFromRequest(r)
-	if r.Method != http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
+		middleware.RequirePermission(kind.UsersEdit)(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				a.permissionsList(w, r, mode)
+			}),
+		).ServeHTTP(w, r)
+		return
+	default:
 		response.NotAllowed(w, r, mode)
 		return
 	}
+}
 
+// Roles handles /api/v1/roles.
+//
+// Supported:
+//   - GET /api/v1/roles
+func (a *API) Roles(w http.ResponseWriter, r *http.Request) {
+	mode := response.ModeFromRequest(r)
+	switch r.Method {
+	case http.MethodGet:
+		middleware.RequirePermission(kind.UsersEdit)(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				a.rolesList(w, r, mode)
+			}),
+		).ServeHTTP(w, r)
+		return
+	default:
+		response.NotAllowed(w, r, mode)
+		return
+	}
+}
+
+func (a *API) permissionsList(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
 	perms := a.accessSVC.GetPermissions()
-	items := make([]string, len(perms))
-	for i, p := range perms {
-		items[i] = string(p)
+
+	items := make([]string, 0, len(perms))
+	for _, p := range perms {
+		items = append(items, apimap.Permission(p))
+	}
+	response.OK(w, r, mode, &responder.View{
+		Data: v1.PermissionListResponse{Items: items},
+	})
+}
+
+func (a *API) rolesList(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
+	roles, err := a.accessSVC.GetRoles(r.Context())
+	if err != nil {
+		response.Unavailable(w, r, mode)
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string][]string{"items": items})
+	items := make([]v1.Role, 0, len(roles))
+	for _, role := range roles {
+		if role == nil {
+			continue
+		}
+		items = append(items, apimap.Role(role))
+	}
+	response.OK(w, r, mode, &responder.View{
+		Data: v1.RoleListResponse{Items: items},
+	})
 }
 
 func (a *API) userList(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {

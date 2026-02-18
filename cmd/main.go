@@ -50,7 +50,7 @@ func main() {
 	)
 
 	var (
-		authSVC    = access.New(authModel)
+		authSVC    = access.New(authModel, store)
 		userSVC    = user.New(store, logger)
 		sessionSVC = session.New(store, logger)
 	)

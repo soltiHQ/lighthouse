@@ -14,6 +14,7 @@ const (
 	ApiUser        = "/api/v1/users/"
 	ApiUsers       = "/api/v1/users"
 	ApiPermissions = "/api/v1/permissions"
+	ApiRoles       = "/api/v1/roles"
 )
 
 var (
