@@ -31,6 +31,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/transport/http/route"
 	"github.com/soltiHQ/control-plane/internal/transportctx"
 	"github.com/soltiHQ/control-plane/internal/ui/policy"
+	contentAgent "github.com/soltiHQ/control-plane/ui/templates/content/agent"
 	contentUser "github.com/soltiHQ/control-plane/ui/templates/content/user"
 )
 
@@ -408,6 +409,7 @@ func (a *API) agentList(w http.ResponseWriter, r *http.Request, mode httpctx.Ren
 			Items:      items,
 			NextCursor: res.NextCursor,
 		},
+		Component: contentAgent.List(res.Items, res.NextCursor),
 	})
 }
 

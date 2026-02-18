@@ -1,0 +1,112 @@
+package agent
+
+import (
+	"fmt"
+	"net/url"
+
+	"github.com/soltiHQ/control-plane/domain/model"
+	"github.com/soltiHQ/control-plane/internal/ui/routepath"
+	"github.com/soltiHQ/control-plane/ui/templates/component/card"
+	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
+	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
+)
+
+templ List(items []*model.Agent, nextCursor string) {
+	<div class="space-y-4">
+		@Results(items, nextCursor)
+	</div>
+}
+
+templ Results(items []*model.Agent, nextCursor string) {
+	<div id="agents-results" class="space-y-4">
+		<div id="agents-cards" class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+			@Cards(items)
+		</div>
+
+		<div id="agents-footer">
+			@Footer(nextCursor)
+		</div>
+	</div>
+}
+
+templ Cards(items []*model.Agent) {
+	if len(items) == 0 {
+		@datagrid.Empty("No agents found")
+	} else {
+		for _, a := range items {
+			@card.Item("") {
+				@card.ItemHeader() {
+					@card.ItemTitle() {
+						if a.Name() != "" {
+							{ a.Name() }
+						} else {
+							{ a.ID() }
+						}
+					}
+					@visual.Badge("Online", visual.VariantSuccess)
+				}
+
+				@card.ItemBody() {
+					<div class="text-xs text-muted-strong font-mono">
+						{ a.ID() }
+					</div>
+
+					if a.Endpoint() != "" {
+						<div class="text-sm text-muted-strong">
+							{ a.Endpoint() }
+						</div>
+					}
+
+					<div class="text-xs text-muted-strong">
+						{ a.Platform() } / { a.OS() } / { a.Arch() }
+					</div>
+
+					if a.UptimeSeconds() > 0 {
+						<div class="text-xs text-fg/60">
+							uptime { formatUptime(a.UptimeSeconds()) }
+						</div>
+					}
+				}
+			}
+		}
+	}
+}
+
+templ Footer(nextCursor string) {
+	if nextCursor != "" {
+		<div
+			id="agents-sentinel"
+			class="h-6"
+			hx-get={ agentsListURL(nextCursor) }
+			hx-trigger="revealed"
+			hx-target="#agents-cards"
+			hx-swap="beforeend"
+			hx-sync="#agents-sentinel:replace"
+		></div>
+	}
+}
+
+func agentsListURL(nextCursor string) string {
+	v := url.Values{}
+	if nextCursor != "" {
+		v.Set("cursor", nextCursor)
+	}
+	qs := v.Encode()
+	if qs == "" {
+		return routepath.ApiAgents
+	}
+	return routepath.ApiAgents + "?" + qs
+}
+
+func formatUptime(s int64) string {
+	switch {
+	case s < 60:
+		return fmt.Sprintf("%ds", s)
+	case s < 3600:
+		return fmt.Sprintf("%dm", s/60)
+	case s < 86400:
+		return fmt.Sprintf("%dh %dm", s/3600, (s%3600)/60)
+	default:
+		return fmt.Sprintf("%dd %dh", s/86400, (s%86400)/3600)
+	}
+}

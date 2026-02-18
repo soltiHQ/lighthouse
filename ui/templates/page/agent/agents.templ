@@ -2,6 +2,8 @@ package agent
 
 import (
 	"github.com/soltiHQ/control-plane/internal/ui/policy"
+	"github.com/soltiHQ/control-plane/internal/ui/routepath"
+	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 )
 
@@ -11,7 +13,17 @@ templ Agents(nav policy.Nav) {
 			<h1 class="text-2xl font-bold text-fg">
 				Agents
 			</h1>
-			<p class="text-fg-subtle">Hello world</p>
+
+			<div
+				id="agents-list"
+				hx-get={ routepath.ApiAgents }
+				hx-trigger="load"
+				hx-target="this"
+				hx-swap="innerHTML"
+				class="min-h-[120px]"
+			>
+				@datagrid.Preload("Loading...")
+			</div>
 		</div>
 	}
 }
