@@ -63,7 +63,7 @@ templ Edit(
 								>
 									<template { xForSelected(s.ID)... }>
 										<span class={ msTag }>
-											<span x-text="tag"></span>
+											<span x-text={ tagTextExpr(s) }></span>
 											<span
 												class={ msTagRemove }
 												x-on:click.stop={ removeTagExpr(s.ID) }
@@ -92,7 +92,7 @@ templ Edit(
 												class={ msCheckbox }
 												x-bind:checked={ isCheckedExpr(s.ID) }
 											/>
-											<span x-text="opt"></span>
+											<span x-text={ optTextExpr(s) }></span>
 										</div>
 									</template>
 								</div>

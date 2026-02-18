@@ -85,3 +85,21 @@ func toggleDropdownExpr(id string) string {
 func closeDropdownExpr(id string) string {
 	return id + "_open = false"
 }
+
+// tagTextExpr returns the Alpine x-text expression for a selected tag.
+// For string selects: "tag", for object selects: "role_ids_labels[tag] || tag".
+func tagTextExpr(s AsyncSelect) string {
+	if s.ValueKey != "" {
+		return s.ID + "_labels[tag] || tag"
+	}
+	return "tag"
+}
+
+// optTextExpr returns the Alpine x-text expression for a dropdown option.
+// For string selects: "opt", for object selects: "role_ids_labels[opt] || opt".
+func optTextExpr(s AsyncSelect) string {
+	if s.ValueKey != "" {
+		return s.ID + "_labels[opt] || opt"
+	}
+	return "opt"
+}

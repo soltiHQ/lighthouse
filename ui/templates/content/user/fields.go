@@ -17,6 +17,14 @@ func editFields(u v1.User) []modal.Field {
 func editSelects(u v1.User) []modal.AsyncSelect {
 	return []modal.AsyncSelect{
 		{
+			ID:       "role_ids",
+			Label:    "Roles",
+			Endpoint: routepath.ApiRoles,
+			Selected: u.RoleIDs,
+			ValueKey: "id",
+			LabelKey: "name",
+		},
+		{
 			ID:       "permissions",
 			Label:    "Permissions",
 			Endpoint: routepath.ApiPermissions,

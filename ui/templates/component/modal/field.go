@@ -19,11 +19,23 @@ type Field struct {
 }
 
 // AsyncSelect describes a multi-select field whose options are loaded from an API.
+//
+// For flat string arrays (e.g. permissions):
+//
+//	Endpoint returns { "items": ["users:get", "users:edit"] }
+//	ValueKey and LabelKey are empty.
+//
+// For object arrays (e.g. roles):
+//
+//	Endpoint returns { "items": [{"id": "role-admin", "name": "admin"}, ...] }
+//	ValueKey = "id", LabelKey = "name".
 type AsyncSelect struct {
-	ID       string   // JSON field name (e.g. "permissions")
+	ID       string   // JSON field name (e.g. "permissions", "role_ids")
 	Label    string
 	Endpoint string   // GET URL that returns { "items": [...] }
 	Selected []string // currently selected values
+	ValueKey string   // object field for value (empty = items are strings)
+	LabelKey string   // object field for display label (empty = same as value)
 }
 
 // disabledAttrs returns templ.Attributes for a disabled input.
@@ -55,6 +67,9 @@ func editFormData(fields []Field, selects []AsyncSelect) string {
 		parts = append(parts, fmt.Sprintf("%s: %s", s.ID, string(v)))
 		parts = append(parts, fmt.Sprintf("%s_opts: []", s.ID))
 		parts = append(parts, fmt.Sprintf("%s_open: false", s.ID))
+		if s.ValueKey != "" {
+			parts = append(parts, fmt.Sprintf("%s_labels: {}", s.ID))
+		}
 	}
 
 	parts = append(parts, "loading: true")
@@ -70,10 +85,23 @@ func initExpr(selects []AsyncSelect) string {
 
 	fetches := make([]string, 0, len(selects))
 	for _, s := range selects {
-		fetches = append(fetches, fmt.Sprintf(
-			`fetch('%s').then(r => r.json()).then(d => { %s_opts = d.items || [] })`,
-			s.Endpoint, s.ID,
-		))
+		if s.ValueKey != "" {
+			// Object items: extract values and build label map.
+			fetches = append(fetches, fmt.Sprintf(
+				`fetch('%s').then(r => r.json()).then(d => {`+
+					` const items = d.items || [];`+
+					` %s_opts = items.map(x => x.%s);`+
+					` %s_labels = Object.fromEntries(items.map(x => [x.%s, x.%s]));`+
+					` })`,
+				s.Endpoint, s.ID, s.ValueKey, s.ID, s.ValueKey, s.LabelKey,
+			))
+		} else {
+			// Flat string items.
+			fetches = append(fetches, fmt.Sprintf(
+				`fetch('%s').then(r => r.json()).then(d => { %s_opts = d.items || [] })`,
+				s.Endpoint, s.ID,
+			))
+		}
 	}
 
 	return fmt.Sprintf(
