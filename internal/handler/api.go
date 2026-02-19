@@ -580,11 +580,14 @@ func (a *API) agentTasksList(w http.ResponseWriter, r *http.Request, mode httpct
 		return
 	}
 
+	items := apimap.TasksFromProxy(result.Tasks)
+
 	response.OK(w, r, mode, &responder.View{
 		Data: v1.TaskListResponse{
-			Tasks: apimap.TasksFromProxy(result.Tasks),
+			Tasks: items,
 			Total: result.Total,
 		},
+		Component: contentAgent.Tasks(agentID, items, result.Total, filter.Slot, filter.Offset),
 	})
 }
 

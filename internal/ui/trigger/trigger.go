@@ -12,11 +12,13 @@ const (
 )
 
 const (
+	Every15s = "every 15s"
 	Every30s = "every 30s"
 	Every1m  = "every 60s"
 	Every5m  = "every 300s"
 
 	UserSessionsRefresh = Every1m
+	AgentTasksRefresh   = Every15s
 )
 
 // TODO: USE IT!!!

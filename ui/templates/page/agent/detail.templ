@@ -5,7 +5,6 @@ import (
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/internal/ui/trigger"
 	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
-	contentAgent "github.com/soltiHQ/control-plane/ui/templates/content/agent"
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 )
 
@@ -27,9 +26,13 @@ templ Detail(nav policy.Nav, agentID string) {
 
 				<div
 					id="agent-tasks"
-					class="lg:h-full lg:overflow-y-auto lg:pr-2"
+					hx-get={ routepath.ApiAgentTasks(agentID) }
+					hx-trigger={ "load, " + trigger.AgentTasksRefresh }
+					hx-target="this"
+					hx-swap="innerHTML"
+					class="lg:h-full lg:overflow-y-auto lg:pr-2 min-h-[140px]"
 				>
-					@contentAgent.Tasks()
+					@datagrid.Preload("Loading tasks...")
 				</div>
 
 			</div>
