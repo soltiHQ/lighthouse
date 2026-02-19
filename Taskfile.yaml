@@ -106,12 +106,6 @@ tasks:
       - task: _go/tool
         vars: { CMD: "go mod tidy" }
 
-  go/mod/vendor:
-    internal: true
-    cmds:
-      - task: _go/tool
-        vars: { CMD: "go mod vendor" }
-
   proto/gen:
     internal: true
     cmds:
@@ -142,6 +136,11 @@ tasks:
       - task: download/htmx
       - task: proto/gen
       - task: templ/gen
+
+  go/mod/vendor:
+    cmds:
+      - task: _go/tool
+        vars: { CMD: "go mod vendor" }
 
   go/test:
     desc: Run Go tests.
