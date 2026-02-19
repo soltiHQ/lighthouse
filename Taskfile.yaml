@@ -73,6 +73,7 @@ tasks:
             - "{{.git_root}}/{{.cache_dir}}:/tmp/{{.cache_dir}}"
           ENVS:
             - "HOME=/tmp"
+            - "GOPATH=/tmp/{{.cache_dir}}/gopath"
             - "GOMODCACHE=/tmp/{{.cache_dir}}/mod"
             - "GOCACHE=/tmp/{{.cache_dir}}/build"
 
@@ -138,8 +139,8 @@ tasks:
   go/mod/vendor:
     deps:
       - deps/install
-      - go/mod/tidy
     cmds:
+      - task: go/mod/tidy
       - task: _go/tool
         vars: { CMD: "go mod vendor" }
 
