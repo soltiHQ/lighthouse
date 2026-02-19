@@ -1,0 +1,25 @@
+package visual
+
+// StatusDot renders an animated pulsing dot indicator.
+// Supported colors: "success", "primary".
+templ StatusDot(color string) {
+	{{
+		size := "h-2 w-2"
+		pingClass := "absolute inline-flex h-full w-full animate-ping rounded-full"
+		dotClass := "relative inline-flex rounded-full"
+
+		var pingColor, dotColor string
+		switch color {
+		case "primary":
+			pingColor = " bg-primary/60"
+			dotColor = " bg-primary"
+		default:
+			pingColor = " bg-success/60"
+			dotColor = " bg-success"
+		}
+	}}
+	<span class={ "relative flex shrink-0 " + size }>
+		<span class={ pingClass + pingColor }></span>
+		<span class={ dotClass + " " + size + dotColor }></span>
+	</span>
+}

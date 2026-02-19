@@ -4,7 +4,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/ui/policy"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/internal/ui/trigger"
-	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
+	"github.com/soltiHQ/control-plane/ui/templates/component/status"
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 )
 
@@ -21,7 +21,7 @@ templ Detail(nav policy.Nav, agentID string) {
 					hx-swap="innerHTML"
 					class="lg:sticky lg:top-6 min-h-[140px]"
 				>
-					@datagrid.Preload("Details Loading...")
+					@status.Preload("Details Loading...")
 				</div>
 
 				<div
@@ -32,7 +32,7 @@ templ Detail(nav policy.Nav, agentID string) {
 					hx-swap="innerHTML"
 					class="lg:h-full lg:overflow-y-auto lg:pr-2 min-h-[140px]"
 				>
-					@datagrid.Preload("Loading tasks...")
+					@status.Preload("Loading tasks...")
 				</div>
 
 			</div>

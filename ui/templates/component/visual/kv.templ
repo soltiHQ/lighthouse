@@ -1,8 +1,4 @@
-package datagrid
-
-import (
-    "github.com/soltiHQ/control-plane/ui/templates/component/visual"
-)
+package visual
 
 templ KV(label string, value string, mono bool) {
 	<div class="min-w-0">
@@ -19,7 +15,7 @@ templ KV(label string, value string, mono bool) {
 
 		if v != "—" {
 			<dd>
-				@visual.Copy(v) { <span class={ cls }>{ v }</span> }
+				@Copy(v) { <span class={ cls }>{ v }</span> }
 			</dd>
 		} else {
 			<dd class={ cls }>{ v }</dd>

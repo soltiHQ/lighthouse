@@ -1,15 +1,13 @@
 package agent
 
 import (
-	"fmt"
-
 	v1 "github.com/soltiHQ/control-plane/api/v1"
 	"github.com/soltiHQ/control-plane/internal/ui/policy"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/internal/ui/trigger"
 	"github.com/soltiHQ/control-plane/ui/templates/asset"
+	"github.com/soltiHQ/control-plane/ui/templates/component/button"
 	"github.com/soltiHQ/control-plane/ui/templates/component/card"
-	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
 	"github.com/soltiHQ/control-plane/ui/templates/component/modal"
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
@@ -29,22 +27,22 @@ templ Identity(a v1.Agent, p policy.AgentDetail) {
 				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
 					<div class="space-y-3 min-w-0">
 						<dl class="space-y-3">
-							@datagrid.KV("Agent ID", a.ID, true)
-							@datagrid.KV("Name", a.Name, false)
-							@datagrid.KV("Endpoint", a.Endpoint, false)
-							@datagrid.KV("Platform", a.Platform, false)
-							@datagrid.KV("OS", a.OS, false)
-							@datagrid.KV("Arch", a.Arch, false)
+							@visual.KV("Agent ID", a.ID, true)
+							@visual.KV("Name", a.Name, false)
+							@visual.KV("Endpoint", a.Endpoint, false)
+							@visual.KV("Platform", a.Platform, false)
+							@visual.KV("OS", a.OS, false)
+							@visual.KV("Arch", a.Arch, false)
 							if a.UptimeSeconds > 0 {
-								@datagrid.KV("Uptime", formatUptime(a.UptimeSeconds), false)
+								@visual.KV("Uptime", formatUptime(a.UptimeSeconds), false)
 							}
 						</dl>
 					</div>
 
 					<div class="space-y-3 min-w-0">
 						<dl class="space-y-3">
-							@labelBadges("Labels", a.Labels)
-							@metadataBadges("Metadata", a.Metadata)
+							@visual.BadgeMap("Labels", a.Labels, visual.VariantSecondary)
+							@visual.BadgeMap("Metadata", a.Metadata, visual.VariantPrimary)
 						</dl>
 					</div>
 				</div>
@@ -53,14 +51,11 @@ templ Identity(a v1.Agent, p policy.AgentDetail) {
 
 		@card.CardFooter() {
 			if p.CanEditLabels {
-				<button
-					type="button"
-					class="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-card text-fg border border-border shadow-sm hover:border-primary/40 hover:shadow-md active:shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-					x-data
-					x-on:click={ modal.OpenEvent("edit-agent-labels") }
-				>
+				@button.Button("", "button", false, button.VariantSecondary, false,
+					templ.Attributes{"x-data": "", "x-on:click": modal.OpenEvent("edit-agent-labels")},
+				) {
 					@asset.Icon("edit")
-				</button>
+				}
 			}
 		}
 	}
@@ -118,7 +113,7 @@ templ labelsEditor(a v1.Agent) {
 				</button>
 			</div>
 
-			<div class="flex justify-end gap-2 px-6 py-4 border-t border-border rounded-b-xl">
+			@modal.Footer() {
 				@modal.CancelButton("Cancel")
 				<button
 					type="submit"
@@ -128,39 +123,7 @@ templ labelsEditor(a v1.Agent) {
 					<span x-show="!submitting">Save</span>
 					<span x-show="submitting" x-cloak>Saving...</span>
 				</button>
-			</div>
+			}
 		</form>
 	}
-}
-
-templ labelBadges(label string, m map[string]string) {
-	<div class="min-w-0">
-		<dt class="text-[11px] font-mono uppercase tracking-[0.1em] text-muted mb-0.5">{ label }</dt>
-
-		if len(m) == 0 {
-			<dd class="text-sm text-fg/60 break-words leading-snug">—</dd>
-		} else {
-			<dd class="flex flex-wrap gap-1.5">
-				for k, v := range m {
-					@visual.Badge(fmt.Sprintf("%s=%s", k, v), visual.VariantSecondary)
-				}
-			</dd>
-		}
-	</div>
-}
-
-templ metadataBadges(label string, m map[string]string) {
-	<div class="min-w-0">
-		<dt class="text-[11px] font-mono uppercase tracking-[0.1em] text-muted mb-0.5">{ label }</dt>
-
-		if len(m) == 0 {
-			<dd class="text-sm text-fg/60 break-words leading-snug">—</dd>
-		} else {
-			<dd class="flex flex-wrap gap-1.5">
-				for k, v := range m {
-					@visual.Badge(fmt.Sprintf("%s=%s", k, v), visual.VariantPrimary)
-				}
-			</dd>
-		}
-	</div>
 }

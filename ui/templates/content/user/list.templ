@@ -6,8 +6,8 @@ import (
 	"github.com/soltiHQ/control-plane/domain/model"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/ui/templates/component/card"
-	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
-	"github.com/soltiHQ/control-plane/ui/templates/component/search"
+	"github.com/soltiHQ/control-plane/ui/templates/component/form"
+	"github.com/soltiHQ/control-plane/ui/templates/component/status"
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
@@ -15,7 +15,7 @@ templ List(items []*model.User, nextCursor string, q string) {
 	<div class="space-y-4">
 		<div class="flex justify-center mb-10">
 			<div class="w-[320px] max-sm:w-full">
-				@search.Input(
+				@form.SearchInput(
 					"users-search",
 					"q",
 					q,
@@ -44,7 +44,7 @@ templ Results(items []*model.User, nextCursor string, q string) {
 
 templ Cards(items []*model.User) {
 	if len(items) == 0 {
-		@datagrid.Empty("No users found")
+		@status.Empty("No users found")
 	} else {
 		for _, u := range items {
 			@card.Item(routepath.PageUserInfoByID(u.ID())) {

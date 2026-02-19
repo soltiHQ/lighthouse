@@ -8,7 +8,7 @@ import (
 	v1 "github.com/soltiHQ/control-plane/api/v1"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/ui/templates/component/card"
-	"github.com/soltiHQ/control-plane/ui/templates/component/search"
+	"github.com/soltiHQ/control-plane/ui/templates/component/form"
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
@@ -25,7 +25,7 @@ templ Tasks(agentID string, items []v1.Task, total int, slot string, offset int)
 
 		@card.CardBody() {
 			<div class="mb-4">
-				@search.Input(
+				@form.SearchInput(
 					"tasks-search",
 					"slot",
 					slot,
@@ -89,14 +89,11 @@ templ taskRow(t v1.Task) {
 	</div>
 }
 
-templ taskStatusBadge(status string) {
-	switch status {
+templ taskStatusBadge(s string) {
+	switch s {
 		case "running":
 			@visual.Badge("running", visual.VariantPrimary) {
-				<span class="relative flex h-1.5 w-1.5">
-					<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60"></span>
-					<span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary"></span>
-				</span>
+				@visual.StatusDot("primary")
 			}
 		case "succeeded":
 			@visual.Badge("succeeded", visual.VariantSuccess)
@@ -111,7 +108,7 @@ templ taskStatusBadge(status string) {
 		case "exhausted":
 			@visual.Badge("exhausted", visual.VariantDanger)
 		default:
-			@visual.Badge(status, visual.VariantMuted)
+			@visual.Badge(s, visual.VariantMuted)
 	}
 }
 

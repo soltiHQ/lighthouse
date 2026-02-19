@@ -6,6 +6,7 @@ templ Button(
 	fullWidth bool,
 	variant Variant,
 	disabled bool,
+	attrs ...templ.Attributes,
 ) {
 	{{
 		width := ""
@@ -20,14 +21,18 @@ templ Button(
 			width
 
 		className := base + radiusFor(variant) + styleFor(variant, false) + focusFor(variant)
+		extra := mergeAttrs(attrs)
 	}}
 
 	<button
 		type={ typ }
 		disabled?={ disabled }
 		class={ className }
+		{ extra... }
 	>
 		{ children... }
-		<span>{ label }</span>
+		if label != "" {
+			<span>{ label }</span>
+		}
 	</button>
 }

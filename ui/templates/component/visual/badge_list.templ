@@ -1,0 +1,45 @@
+package visual
+
+import "fmt"
+
+// BadgeList renders a labeled list of string badges.
+// Used for displaying roles, permissions, etc.
+templ BadgeList(label string, items []string, variant Variant, copyable bool) {
+	<div class="min-w-0">
+		<dt class="text-[11px] font-mono uppercase tracking-[0.1em] text-muted mb-0.5">{ label }</dt>
+
+		if len(items) == 0 {
+			<dd class="text-sm text-fg/60 break-words leading-snug">—</dd>
+		} else {
+			<dd class="flex flex-wrap gap-1.5">
+				for _, it := range items {
+					if copyable {
+						@Copy(it) {
+							@Badge(it, variant)
+						}
+					} else {
+						@Badge(it, variant)
+					}
+				}
+			</dd>
+		}
+	</div>
+}
+
+// BadgeMap renders a labeled list of key=value badges from a map.
+// Used for displaying labels, metadata, etc.
+templ BadgeMap(label string, items map[string]string, variant Variant) {
+	<div class="min-w-0">
+		<dt class="text-[11px] font-mono uppercase tracking-[0.1em] text-muted mb-0.5">{ label }</dt>
+
+		if len(items) == 0 {
+			<dd class="text-sm text-fg/60 break-words leading-snug">—</dd>
+		} else {
+			<dd class="flex flex-wrap gap-1.5">
+				for k, v := range items {
+					@Badge(fmt.Sprintf("%s=%s", k, v), variant)
+				}
+			</dd>
+		}
+	</div>
+}

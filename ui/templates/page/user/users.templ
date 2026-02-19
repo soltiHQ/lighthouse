@@ -4,8 +4,9 @@ import (
 	"github.com/soltiHQ/control-plane/internal/ui/policy"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/ui/templates/asset"
-	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
+	"github.com/soltiHQ/control-plane/ui/templates/component/button"
 	"github.com/soltiHQ/control-plane/ui/templates/component/modal"
+	"github.com/soltiHQ/control-plane/ui/templates/component/status"
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 	contentUser "github.com/soltiHQ/control-plane/ui/templates/content/user"
 )
@@ -19,15 +20,11 @@ templ Users(nav policy.Nav) {
 				</h1>
 
 				if nav.CanAddUser {
-					<button
-						type="button"
-						class="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-primary text-white font-semibold hover:bg-primary/90 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-						x-data
-						x-on:click={ modal.OpenEvent("create-user") }
-					>
+					@button.Button("Add", "button", false, button.VariantPrimary, false,
+						templ.Attributes{"x-data": "", "x-on:click": modal.OpenEvent("create-user")},
+					) {
 						@asset.Icon("add")
-						Add
-					</button>
+					}
 				}
 			</div>
 
@@ -39,7 +36,7 @@ templ Users(nav policy.Nav) {
 				hx-swap="innerHTML"
 				class="min-h-[120px]"
 			>
-				@datagrid.Preload("Loading...")
+				@status.Preload("Loading...")
 			</div>
 		</div>
 
