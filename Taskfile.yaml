@@ -100,8 +100,6 @@ tasks:
 
   go/mod/tidy:
     internal: true
-    deps:
-      - go/tidy
     cmds:
       - task: _go/tool
         vars: { CMD: "go mod tidy" }
@@ -138,6 +136,9 @@ tasks:
       - task: templ/gen
 
   go/mod/vendor:
+    deps:
+      - deps/install
+      - go/mod/tidy
     cmds:
       - task: _go/tool
         vars: { CMD: "go mod vendor" }
@@ -145,7 +146,6 @@ tasks:
   go/test:
     desc: Run Go tests.
     deps:
-      - deps/install
       - go/mod/vendor
     cmds:
       - task: _go/tool
@@ -153,18 +153,24 @@ tasks:
 
   go/fumpt:
     desc: Run Go fumpt formatter.
+    deps:
+      - go/mod/vendor
     cmds:
       - task: _go/tool
         vars: { CMD: "gofumpt -l -w $(git ls-files \"*.go\")" }
 
   go/lint:
     desc: Run Go linters.
+    deps:
+      - go/mod/vendor
     cmds:
       - task: _go/tool
         vars: { CMD: "golangci-lint run ./..." }
 
   go/vulnerability:
     desc: Run vulnerability scanner.
+    deps:
+      - go/mod/vendor
     cmds:
       - task: _go/tool
         vars: { CMD: "govulncheck ./..." }
