@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package tno.api.v1;
+package solti.api.v1;
 
 option go_package = "github.com/soltiHQ/control-plane/domain/gen/v1;genv1";
 
@@ -27,9 +27,9 @@ message TaskInfo {
   optional string error = 7;
 }
 
-// TnoApi provides task management on the agent side.
+// SoltiApi provides task management on the agent side.
 // The control-plane acts as a gRPC client calling into the agent.
-service TnoApi {
+service SoltiApi {
   // ListTasks returns tasks matching the given filters with pagination.
   rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
 }

@@ -13,7 +13,7 @@ import (
 
 const grpcTimeout = 10 * time.Second
 
-// grpcProxy implements AgentProxy over gRPC (tno.v1.TnoApi).
+// grpcProxy implements AgentProxy over gRPC (solti.v1.SoltiApi).
 type grpcProxy struct {
 	endpoint string
 }
@@ -31,7 +31,7 @@ func (p *grpcProxy) ListTasks(ctx context.Context, f TaskFilter) (*TaskListResul
 	}
 	defer conn.Close()
 
-	client := genv1.NewTnoApiClient(conn)
+	client := genv1.NewSoltiApiClient(conn)
 
 	req := &genv1.ListTasksRequest{
 		Limit:  uint32(f.Limit),

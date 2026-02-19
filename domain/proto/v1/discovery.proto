@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package tno.discover.v1;
+package solti.discover.v1;
 
 option go_package = "github.com/soltiHQ/control-plane/domain/gen/v1;genv1";
 
