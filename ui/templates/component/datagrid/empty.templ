@@ -1,0 +1,17 @@
+package datagrid
+
+templ Empty(message string) {
+	<div class={ containerClass("py-14") }>
+		<div class="opacity-70">
+			<img
+				src="/static/img/empty.png"
+				alt="empty"
+				class="w-40 h-auto select-none pointer-events-none"
+			/>
+		</div>
+
+		<p class={ messageClass(true) }>
+			{ message }
+		</p>
+	</div>
+}

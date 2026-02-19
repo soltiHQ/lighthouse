@@ -1,0 +1,98 @@
+package layout
+
+templ Root(title string) {
+	<!DOCTYPE html>
+	<html lang="ru" class="fonts-loading">
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+		<title>{ title }</title>
+
+		<link rel="stylesheet" href="/static/css/tailwindcss.css"/>
+
+		<script src="/static/js/htmx.min.js"></script>
+		<script src="/static/js/copy_buf.js" defer></script>
+		<script src="/static/js/alpine.min.js" defer></script>
+
+		<style>
+			html.fonts-loading body { visibility: hidden; }
+			html.fonts-loaded body { visibility: visible; }
+		</style>
+
+		<script>
+			(function () {
+				var done = false;
+				function finish() {
+					if (done) return;
+					done = true;
+					var root = document.documentElement;
+					root.classList.remove("fonts-loading");
+					root.classList.add("fonts-loaded");
+				}
+
+				setTimeout(finish, 800);
+				try {
+					if (document.fonts && document.fonts.ready) {
+						document.fonts.ready.then(finish).catch(finish);
+					} else {
+						window.addEventListener("load", finish, { once: true });
+					}
+				} catch (e) {
+					finish();
+				}
+			})();
+		</script>
+
+		<script>
+			(function() {
+				function getCookie(name) {
+					var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+					if (match) return match[2];
+					return null;
+				}
+				try {
+					var theme = getCookie("theme");
+					var root = document.documentElement;
+
+					if (theme === "dark") {
+						root.classList.add("dark");
+					} else {
+						root.classList.remove("dark");
+					}
+				} catch (e) {}
+			})();
+		</script>
+
+		<script>
+			(function() {
+				window.__setTheme = function(mode) {
+					try {
+						var root = document.documentElement;
+
+						if (mode === "dark") {
+							root.classList.add("dark");
+						} else {
+							root.classList.remove("dark");
+							mode = "light";
+						}
+						document.cookie = "theme=" + mode + "; path=/; max-age=31536000";
+					} catch (e) {}
+				};
+
+				window.__toggleTheme = function() {
+					try {
+						var root = document.documentElement;
+						var isDark = root.classList.contains("dark");
+						window.__setTheme(isDark ? "light" : "dark");
+					} catch (e) {}
+				};
+			})();
+		</script>
+	</head>
+
+	<body class="min-h-screen bg-bg text-fg">
+		{ children... }
+	</body>
+	</html>
+}

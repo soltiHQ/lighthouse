@@ -1,0 +1,24 @@
+package layout
+
+import (
+    "github.com/soltiHQ/control-plane/internal/ui/policy"
+    "github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
+)
+
+templ App(title string, active string, nav policy.Nav) {
+	@Root(title) {
+		@datagrid.VBar(active, nav)
+
+		<div
+			class="
+				min-h-screen bg-bg
+				pl-[80px]
+				max-sm:pl-0 max-sm:pb-[64px]
+			"
+		>
+			<main class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+				{ children... }
+			</main>
+		</div>
+	}
+}

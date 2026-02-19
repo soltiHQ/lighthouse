@@ -1,0 +1,51 @@
+package jwt
+
+import (
+	"context"
+
+	"github.com/soltiHQ/control-plane/internal/auth"
+	"github.com/soltiHQ/control-plane/internal/auth/identity"
+	"github.com/soltiHQ/control-plane/internal/auth/token"
+
+	jwtlib "github.com/golang-jwt/jwt/v5"
+)
+
+// HSIssuer issues HMAC-signed JWT access tokens (HS256).
+type HSIssuer struct {
+	secret []byte
+	clock  token.Clock
+}
+
+// NewHSIssuer creates a HS256 JWT issuer.
+func NewHSIssuer(secret []byte, clock token.Clock) *HSIssuer {
+	if clock == nil {
+		clock = token.RealClock()
+	}
+	return &HSIssuer{
+		secret: append([]byte(nil), secret...),
+		clock:  clock,
+	}
+}
+
+func (i *HSIssuer) Issue(_ context.Context, id *identity.Identity) (string, error) {
+	if id == nil {
+		return "", auth.ErrInvalidToken
+	}
+
+	if id.Issuer == "" || id.Subject == "" || id.UserID == "" {
+		return "", auth.ErrInvalidToken
+	}
+	if len(id.Audience) == 0 {
+		return "", auth.ErrInvalidToken
+	}
+	if len(i.secret) == 0 {
+		return "", auth.ErrInvalidToken
+	}
+
+	var (
+		now    = i.clock.Now()
+		claims = mapClaimsFromIdentity(id, now)
+		t      = jwtlib.NewWithClaims(jwtlib.SigningMethodHS256, claims)
+	)
+	return t.SignedString(i.secret)
+}

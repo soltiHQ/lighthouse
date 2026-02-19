@@ -1,0 +1,40 @@
+package card
+
+templ Item(href string) {
+	{{
+		base := `
+			rounded-[var(--r-6)]
+			border border-border
+			bg-card
+			p-4
+			space-y-2
+		`
+	}}
+	if href != "" {
+		<a href={ href } class={ linkClass(base) }>
+			{ children... }
+		</a>
+	} else {
+		<div class={ base }>
+			{ children... }
+		</div>
+	}
+}
+
+templ ItemHeader() {
+	<div class="flex items-center justify-between">
+		{ children... }
+	</div>
+}
+
+templ ItemTitle() {
+	<div class="text-sm font-semibold text-fg">
+		{ children... }
+	</div>
+}
+
+templ ItemBody() {
+	<div class="space-y-1">
+		{ children... }
+	</div>
+}

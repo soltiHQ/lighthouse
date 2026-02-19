@@ -1,0 +1,84 @@
+package system
+
+import (
+	"github.com/soltiHQ/control-plane/ui/templates/asset"
+	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
+	"github.com/soltiHQ/control-plane/ui/templates/component/form"
+	"github.com/soltiHQ/control-plane/ui/templates/component/button"
+	"github.com/soltiHQ/control-plane/ui/templates/layout"
+)
+
+templ Login(redirectURL string, errMsg string) {
+	@layout.Root("Login") {
+		<div class="relative min-h-screen bg-bg text-fg flex items-center justify-center px-4 overflow-hidden">
+			@visual.BackgroundCircle()
+
+			<div class="relative w-full max-w-sm">
+				<div class="text-center space-y-3">
+					<h1 class="flex items-center justify-center gap-3 text-3xl font-semibold tracking-tight text-fg">
+						<span class="text-primary [&_svg]:h-10 [&_svg]:w-10">
+							@asset.Solti()
+						</span>
+						<span>Solti</span>
+					</h1>
+
+					<h2 class="text-lg font-medium text-fg/80">
+						Let's get you signed in
+					</h2>
+				</div>
+
+				<form method="POST" action="/login" class="mt-4 space-y-4">
+					<input type="hidden" name="redirect" value={ redirectURL }/>
+
+					@form.Input(
+						"subject",
+						"text",
+						"",
+						"Username",
+						true,
+						true,
+						"",
+					)
+
+					@form.Input(
+						"password",
+						"password",
+						"",
+						"Password",
+						true,
+						false,
+						"",
+					)
+
+					<div class="space-y-3">
+						@button.Button(
+							"Sign in",
+							"submit",
+							true,
+							"primary",
+							false,
+						)
+
+						<div class="min-h-[44px]">
+							if errMsg != "" {
+								<div
+									class="
+										rounded-[var(--r-6)]
+										border border-danger/40
+										bg-danger/10
+										text-danger
+										px-3 py-2
+										text-sm
+									"
+									role="alert"
+								>
+									{ errMsg }
+								</div>
+							}
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	}
+}

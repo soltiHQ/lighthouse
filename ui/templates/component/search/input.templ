@@ -1,0 +1,47 @@
+package search
+
+import "github.com/soltiHQ/control-plane/ui/templates/asset"
+
+templ Input(
+	id string,
+	name string,
+	value string,
+	placeholder string,
+	endpoint string,
+	target string,
+) {
+	<div class="relative">
+		<div class="absolute inset-y-0 left-3 flex items-center text-muted pointer-events-none">
+			@asset.Search()
+		</div>
+
+		<input
+			id={ id }
+			type="search"
+			name={ name }
+			value={ value }
+			placeholder={ placeholder }
+			class="
+            	block w-full h-10 pl-10 pr-4
+            	rounded-2xl
+            	bg-card text-fg
+            	border border-input
+           		placeholder:text-muted-strong
+            	shadow-[var(--shadow)]
+            	transition
+           		hover:border-border
+           		hover:shadow-[var(--shadow)]
+            	focus:outline-none
+            	focus:border-primary/60
+           		focus:shadow-[var(--shadow-focus)]
+           	"
+			hx-get={ endpoint }
+			hx-trigger="input changed delay:300ms, search"
+			hx-target={ target }
+			hx-select={ target }
+			hx-swap="outerHTML"
+			hx-push-url="false"
+			hx-sync="this:replace"
+		/>
+	</div>
+}

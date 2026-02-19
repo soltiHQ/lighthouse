@@ -1,0 +1,145 @@
+package datagrid
+
+import (
+	"github.com/soltiHQ/control-plane/internal/ui/policy"
+	"github.com/soltiHQ/control-plane/ui/templates/asset"
+)
+
+templ VBar(active string, nav policy.Nav) {
+	<nav
+		class="
+			fixed z-50
+			bg-card text-fg border-border
+			left-0 top-0 h-screen w-[80px] border-r
+			max-sm:left-0 max-sm:top-auto max-sm:bottom-0
+			max-sm:h-[64px] max-sm:w-full
+			max-sm:border-r-0 max-sm:border-t
+		"
+	>
+		<div
+			class="
+				h-full w-full
+				flex flex-col items-center justify-between
+				py-3
+				max-sm:flex-row max-sm:py-0 max-sm:px-2
+			"
+		>
+			<div class="flex flex-col items-center gap-2 max-sm:flex-row max-sm:gap-1">
+				@VBarLogo()
+
+				if nav.ShowAgents {
+					@VBarItem("agents", "/agents", "Agents", active)
+				}
+				if nav.ShowTasks {
+					@VBarItem("tasks", "/tasks", "Tasks", active)
+				}
+				if nav.ShowUsers {
+					@VBarItem("users", "/users", "Users", active)
+				}
+			</div>
+
+			<div class="flex flex-col items-center gap-2 max-sm:flex-row max-sm:gap-1">
+				@ThemeToggle()
+				@VBarItem("logout", "/logout", "Logout", active)
+			</div>
+		</div>
+	</nav>
+}
+
+templ VBarLogo() {
+	<a
+		href="/"
+		class="
+			flex items-center justify-center
+			h-14 w-14
+			rounded-2xl
+
+			bg-card
+			text-primary
+			border border-border
+
+			shadow-sm
+			transition-all duration-200
+
+			hover:border-primary/40
+			hover:shadow-md
+
+			active:shadow-sm
+		"
+		title="Home"
+	>
+		<span class="[&_svg]:h-7 [&_svg]:w-7">
+			@asset.Solti()
+		</span>
+	</a>
+}
+
+templ VBarItem(id string, href string, label string, active string) {
+	if active == id {
+		<a
+			href={ href }
+			class="
+				flex items-center justify-center
+				h-12 w-12 rounded-xl
+
+				bg-nav-bg
+				text-icon-active
+
+				border border-border
+				shadow-sm
+			"
+			title={ label }
+		>
+			@asset.Icon(id)
+		</a>
+	} else {
+		<a
+			href={ href }
+			class="
+				flex items-center justify-center
+				h-12 w-12 rounded-xl
+
+				text-icon
+				border border-transparent
+
+				transition-all duration-200
+				hover:text-fg
+				hover:bg-nav-bg
+				hover:border-border
+				hover:shadow-[0_1px_4px_rgba(0,0,0,0.08)]
+			"
+			title={ label }
+		>
+			@asset.Icon(id)
+		</a>
+	}
+}
+
+templ ThemeToggle() {
+	<button
+		type="button"
+		onclick="window.__toggleTheme && window.__toggleTheme()"
+		class="
+			flex items-center justify-center
+			h-12 w-12 rounded-xl
+
+			text-icon
+			border border-transparent
+
+			transition-all duration-200
+			hover:text-fg
+			hover:bg-nav-bg
+			hover:border-border
+			hover:shadow-[0_1px_4px_rgba(0,0,0,0.08)]
+		"
+		title="Theme"
+		aria-label="Toggle theme"
+	>
+		<span class="hidden dark:block">
+			@asset.Icon("theme_light")
+		</span>
+		<span class="block dark:hidden">
+			@asset.Icon("theme_dark")
+		</span>
+	</button>
+}

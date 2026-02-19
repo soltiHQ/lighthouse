@@ -1,0 +1,55 @@
+package form
+
+templ Select(
+	id string,
+	options []Option,
+	multiple bool,
+	required bool,
+	errMsg string,
+	attrs ...templ.Attributes,
+) {
+	{{
+		hasErr := errMsg != ""
+		cls := SelectClass(hasErr, multiple)
+		extra := mergeAttrs(attrs)
+	}}
+
+	<div class="space-y-1">
+		if hasErr {
+			<select
+				id={ id }
+				name={ id }
+				multiple?={ multiple }
+				required?={ required }
+				aria-invalid="true"
+				aria-describedby={ id + "-error" }
+				class={ cls }
+				{ extra... }
+			>
+				for _, o := range options {
+					<option value={ o.Value } selected?={ o.Selected }>{ o.Label }</option>
+				}
+			</select>
+		} else {
+			<select
+				id={ id }
+				name={ id }
+				multiple?={ multiple }
+				required?={ required }
+				aria-invalid="false"
+				class={ cls }
+				{ extra... }
+			>
+				for _, o := range options {
+					<option value={ o.Value } selected?={ o.Selected }>{ o.Label }</option>
+				}
+			</select>
+		}
+
+		if hasErr {
+			<p id={ id + "-error" } class="text-xs text-danger">
+				{ errMsg }
+			</p>
+		}
+	</div>
+}

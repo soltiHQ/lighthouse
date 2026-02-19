@@ -18,7 +18,7 @@ coverage.*
 profile.cov
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
 
 # Go workspace file
 go.work
@@ -27,6 +27,25 @@ go.work.sum
 # env file
 .env
 
+# temporary cache
+.cache/
+
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+
+# OS specific
+.DS_Store
+
+# static
+ui/static/js/alpine.min.js
+ui/static/js/htmx.min.js
+
+# proto
+domain/gen/
+
+# templ
+ui/**/*_templ.go
+
+# tailwindcss
+tailwindcss.css

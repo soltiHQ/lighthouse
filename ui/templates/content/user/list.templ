@@ -1,0 +1,114 @@
+package user
+
+import (
+	"net/url"
+
+	"github.com/soltiHQ/control-plane/domain/model"
+	"github.com/soltiHQ/control-plane/internal/ui/routepath"
+	"github.com/soltiHQ/control-plane/ui/templates/component/card"
+	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
+	"github.com/soltiHQ/control-plane/ui/templates/component/search"
+	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
+)
+
+templ List(items []*model.User, nextCursor string, q string) {
+	<div class="space-y-4">
+		<div class="flex justify-center mb-10">
+			<div class="w-[320px] max-sm:w-full">
+				@search.Input(
+					"users-search",
+					"q",
+					q,
+					"Search…",
+					routepath.ApiUsers,
+					"#users-results",
+				)
+			</div>
+		</div>
+
+		@Results(items, nextCursor, q)
+	</div>
+}
+
+templ Results(items []*model.User, nextCursor string, q string) {
+	<div id="users-results" class="space-y-4">
+		<div id="users-cards" class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+			@Cards(items)
+		</div>
+
+		<div id="users-footer">
+			@Footer(nextCursor, q)
+		</div>
+	</div>
+}
+
+templ Cards(items []*model.User) {
+	if len(items) == 0 {
+		@datagrid.Empty("No users found")
+	} else {
+		for _, u := range items {
+			@card.Item(routepath.PageUserInfoByID(u.ID())) {
+
+				@card.ItemHeader() {
+					@card.ItemTitle() {
+						{ u.Subject() }
+					}
+
+					if u.Disabled() {
+						@visual.Badge("Disabled", visual.VariantDanger)
+					} else {
+						@visual.Badge("Active", visual.VariantSuccess)
+					}
+				}
+
+				@card.ItemBody() {
+					<div class="text-sm text-muted-strong">
+						if u.Name() != "" {
+							{ u.Name() }
+						} else {
+							<span class="text-fg/60">—</span>
+						}
+					</div>
+
+					<div class="text-xs text-muted-strong">
+						if u.Email() != "" {
+							{ u.Email() }
+						} else {
+							<span class="text-fg/60">—</span>
+						}
+					</div>
+				}
+			}
+		}
+	}
+}
+
+templ Footer(nextCursor string, q string) {
+	if nextCursor != "" {
+		<div
+			id="users-sentinel"
+			class="h-6"
+			hx-get={ usersListURL(nextCursor, q) }
+			hx-trigger="revealed"
+			hx-target="#users-cards"
+			hx-swap="beforeend"
+			hx-sync="#users-sentinel:replace"
+		></div>
+	}
+}
+
+func usersListURL(nextCursor string, q string) string {
+	v := url.Values{}
+	if nextCursor != "" {
+		v.Set("cursor", nextCursor)
+	}
+	if q != "" {
+		v.Set("q", q)
+	}
+
+	qs := v.Encode()
+	if qs == "" {
+		return routepath.ApiUsers
+	}
+	return routepath.ApiUsers + "?" + qs
+}

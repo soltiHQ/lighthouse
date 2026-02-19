@@ -1,0 +1,55 @@
+package form
+
+templ Input(
+	id string,
+	typ string,
+	value string,
+	placeholder string,
+	required bool,
+	autofocus bool,
+	errMsg string,
+	attrs ...templ.Attributes,
+) {
+	{{
+		hasErr := errMsg != ""
+		cls := InputClass(hasErr)
+		extra := mergeAttrs(attrs)
+	}}
+
+	<div class="space-y-1">
+		if hasErr {
+			<input
+				type={ typ }
+				id={ id }
+				name={ id }
+				value={ value }
+				placeholder={ placeholder }
+				required?={ required }
+				autofocus?={ autofocus }
+				aria-invalid="true"
+				aria-describedby={ id + "-error" }
+				class={ cls }
+				{ extra... }
+			/>
+		} else {
+			<input
+				type={ typ }
+				id={ id }
+				name={ id }
+				value={ value }
+				placeholder={ placeholder }
+				required?={ required }
+				autofocus?={ autofocus }
+				aria-invalid="false"
+				class={ cls }
+				{ extra... }
+			/>
+		}
+
+		if hasErr {
+			<p id={ id + "-error" } class="text-xs text-danger">
+				{ errMsg }
+			</p>
+		}
+	</div>
+}

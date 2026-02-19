@@ -1,0 +1,33 @@
+package button
+
+templ Button(
+	label string,
+	typ string,
+	fullWidth bool,
+	variant Variant,
+	disabled bool,
+) {
+	{{
+		width := ""
+		if fullWidth {
+			width = "w-full "
+		}
+
+		base := "inline-flex items-center justify-center gap-2 " +
+			"h-10 px-4 " +
+			"disabled:opacity-50 disabled:pointer-events-none " +
+			"transition-all duration-200 " +
+			width
+
+		className := base + radiusFor(variant) + styleFor(variant, false) + focusFor(variant)
+	}}
+
+	<button
+		type={ typ }
+		disabled?={ disabled }
+		class={ className }
+	>
+		{ children... }
+		<span>{ label }</span>
+	</button>
+}

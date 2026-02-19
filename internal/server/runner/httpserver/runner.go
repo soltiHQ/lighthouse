@@ -1,0 +1,114 @@
+package httpserver
+
+import (
+	"context"
+	"errors"
+	"net"
+	"net/http"
+	"sync/atomic"
+
+	"github.com/rs/zerolog"
+)
+
+// Runner is a server.Runner implementation for http.Server.
+type Runner struct {
+	logger  zerolog.Logger
+	handler http.Handler
+	cfg     Config
+
+	srv   *http.Server
+	ln    net.Listener
+	ready chan struct{}
+
+	started atomic.Bool
+}
+
+// New creates an HTTP server runner.
+func New(cfg Config, logger zerolog.Logger, handler http.Handler) (*Runner, error) {
+	if handler == nil {
+		return nil, ErrNilHandler
+	}
+
+	cfg = cfg.withDefaults()
+	if cfg.Addr == "" {
+		return nil, ErrEmptyAddr
+	}
+
+	return &Runner{
+		handler: handler,
+		logger:  logger,
+		cfg:     cfg,
+		ready:   make(chan struct{}),
+	}, nil
+}
+
+// Name returns the runner name.
+func (r *Runner) Name() string { return r.cfg.Name }
+
+// Start binds the listener and serves until Stop() shuts it down.
+func (r *Runner) Start(_ context.Context) error {
+	if !r.started.CompareAndSwap(false, true) {
+		return ErrAlreadyStarted
+	}
+
+	ln, err := net.Listen("tcp", r.cfg.Addr)
+	if err != nil {
+		close(r.ready)
+		return err
+	}
+	r.ln = ln
+
+	r.srv = &http.Server{
+		Addr:    r.cfg.Addr,
+		Handler: r.handler,
+
+		ReadHeaderTimeout: r.cfg.ReadHeaderTimeout,
+		ReadTimeout:       r.cfg.ReadTimeout,
+		WriteTimeout:      r.cfg.WriteTimeout,
+		IdleTimeout:       r.cfg.IdleTimeout,
+		MaxHeaderBytes:    r.cfg.MaxHeaderBytes,
+
+		BaseContext: r.cfg.BaseContext,
+		ConnContext: r.cfg.ConnContext,
+	}
+	close(r.ready)
+
+	r.logger.Info().
+		Str("runner", r.cfg.Name).
+		Str("addr", r.cfg.Addr).
+		Msg("http server listening")
+
+	err = r.srv.Serve(ln)
+	if err == nil || errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
+	return err
+}
+
+// Stop gracefully shuts down the server within the ctx deadline.
+func (r *Runner) Stop(ctx context.Context) error {
+	select {
+	case <-r.ready:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	srv := r.srv
+	if srv == nil {
+		return nil
+	}
+
+	r.logger.Info().
+		Str("runner", r.cfg.Name).
+		Msg("http server shutdown requested")
+
+	if err := srv.Shutdown(ctx); err != nil {
+		_ = srv.Close()
+		r.logger.Warn().
+			Err(err).
+			Str("runner", r.cfg.Name).
+			Msg("http server hard-closed (timeout)")
+		return err
+	}
+	return nil
+}

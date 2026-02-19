@@ -1,0 +1,51 @@
+package system
+
+import (
+	"strconv"
+
+    "github.com/soltiHQ/control-plane/ui/templates/asset"
+	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
+	"github.com/soltiHQ/control-plane/ui/templates/layout"
+)
+
+templ ErrorPage(code int, title, message, requestID string) {
+	@layout.Root(title) {
+		<div class="relative min-h-screen bg-bg text-fg overflow-hidden">
+			@visual.BackgroundCircle()
+
+			<main class="relative mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center px-6 py-10">
+				<div class="text-sm font-mono uppercase tracking-[0.12em] text-muted-strong">
+					{ strconv.Itoa(code) }
+				</div>
+
+				<div class="mt-6 space-y-4">
+					<h1 class="text-4xl font-semibold tracking-tight text-fg sm:text-5xl">
+						{ title }
+					</h1>
+
+					if message != "" {
+						<p class="text-base leading-7 text-fg/80">
+							{ message }
+						</p>
+					}
+				</div>
+
+				<div class="mt-10">
+					if requestID != "" {
+						<div
+                          data-copy
+                          data-copy-text={ requestID }
+                          title="Click to copy"
+                          class="inline-flex cursor-pointer items-center gap-2 rounded-[var(--r-6)] border border-border bg-card px-3 py-2 text-xs font-mono tracking-[0.08em] text-muted-strong select-none hover:border-primary/40"
+                        >
+                          <span class="text-muted-strong">
+                            @asset.Copy()
+                          </span>
+                          { requestID }
+                        </div>
+					}
+				</div>
+			</main>
+		</div>
+	}
+}

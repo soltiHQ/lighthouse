@@ -1,0 +1,161 @@
+package user
+
+import (
+	v1 "github.com/soltiHQ/control-plane/api/v1"
+	"github.com/soltiHQ/control-plane/internal/ui/policy"
+	"github.com/soltiHQ/control-plane/internal/ui/routepath"
+	"github.com/soltiHQ/control-plane/ui/templates/asset"
+	"github.com/soltiHQ/control-plane/ui/templates/component/button"
+	"github.com/soltiHQ/control-plane/ui/templates/component/card"
+	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
+	"github.com/soltiHQ/control-plane/ui/templates/component/modal"
+	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
+)
+
+templ Detail(apiUser v1.User, p policy.UserDetail) {
+	@Identity(apiUser, p)
+}
+
+templ Identity(u v1.User, p policy.UserDetail) {
+	@card.Card("") {
+		@card.CardBody() {
+			<div class="space-y-6">
+				<div class="space-y-2">
+					if !u.Disabled {
+						@visual.Badge("Active", visual.VariantSuccess)
+					} else {
+						@visual.Badge("Disabled", visual.VariantDanger)
+					}
+				</div>
+
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
+					<div class="space-y-3 min-w-0">
+						<dl class="space-y-3">
+							@datagrid.KV("User ID", u.ID, true)
+							@datagrid.KV("Subject", u.Subject, false)
+							@datagrid.KV("Name", u.Name, false)
+							@datagrid.KV("Email", u.Email, false)
+						</dl>
+					</div>
+
+					<div class="space-y-3 min-w-0">
+						<dl class="space-y-3">
+							@metaBadges("Roles", u.RoleIDs, visual.VariantSecondary, true)
+							@metaBadges("Permissions", u.Permissions, visual.VariantPrimary, true)
+						</dl>
+					</div>
+				</div>
+			</div>
+		}
+
+		@card.CardFooter() {
+			if p.CanEdit {
+				if u.Disabled {
+					<form hx-post={ routepath.ApiUserEnable(u.ID) } hx-swap="none">
+						@button.Button("", "submit", false, button.VariantSecondary, false) {
+							<span> </span>
+							@asset.Icon("enable")
+						}
+					</form>
+				} else {
+					<form hx-post={ routepath.ApiUserDisable(u.ID) } hx-swap="none">
+						@button.Button("", "submit", false, button.VariantSecondary, false) {
+							<span> </span>
+							@asset.Icon("disable")
+						}
+					</form>
+				}
+
+				<button
+					type="button"
+					class="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-card text-fg border border-border shadow-sm hover:border-primary/40 hover:shadow-md active:shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+					x-data
+					x-on:click={ modal.OpenEvent("edit-user") }
+				>
+					@asset.Icon("edit")
+				</button>
+			}
+
+			if p.CanDelete {
+				<button
+					type="button"
+					class="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-danger text-white hover:bg-danger/90 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
+					x-data
+					x-on:click={ modal.OpenEvent("delete-user") }
+				>
+					@asset.Icon("delete")
+				</button>
+			}
+
+			if p.CanEdit {
+				<button
+					type="button"
+					class="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-2xl bg-card text-fg border border-border shadow-sm hover:border-primary/40 hover:shadow-md active:shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+					x-data
+					x-on:click={ modal.OpenEvent("password-user") }
+				>
+					@asset.Icon("password")
+				</button>
+			}
+		}
+	}
+
+	if p.CanDelete {
+		@modal.Confirm(
+			"delete-user",
+			"Delete user",
+			"Are you sure you want to delete "+u.Subject+"? This action cannot be undone.",
+			"Delete",
+			routepath.ApiUserCrudOp(u.ID),
+			modal.MethodDelete,
+			modal.VariantDanger,
+		)
+	}
+
+	if p.CanEdit {
+		if p.CanEditRoles {
+			@modal.Edit(
+				"edit-user",
+				"Edit user",
+				routepath.ApiUserCrudOp(u.ID),
+				editFields(u),
+				editSelects(u),
+			)
+		} else {
+			@modal.Edit(
+				"edit-user",
+				"Edit user",
+				routepath.ApiUserCrudOp(u.ID),
+				editFields(u),
+				nil,
+			)
+		}
+		@modal.Password(
+			"password-user",
+			"Set password",
+			routepath.ApiUserPassword(u.ID),
+		)
+	}
+}
+
+templ metaBadges(label string, items []string, variant visual.Variant, copy bool) {
+	<div class="min-w-0">
+		<dt class="text-[11px] font-mono uppercase tracking-[0.1em] text-muted mb-0.5">{ label }</dt>
+
+		if len(items) == 0 {
+			<dd class="text-sm text-fg/60 break-words leading-snug">—</dd>
+		} else {
+			<dd class="flex flex-wrap gap-1.5">
+				for _, it := range items {
+					if copy {
+						@visual.Copy(it) {
+							@visual.Badge(it, variant)
+						}
+					} else {
+						@visual.Badge(it, variant)
+					}
+				}
+			</dd>
+		}
+	</div>
+}

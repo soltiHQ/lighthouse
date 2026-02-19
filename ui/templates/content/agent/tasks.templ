@@ -1,0 +1,150 @@
+package agent
+
+import (
+	"fmt"
+	"net/url"
+	"strconv"
+
+	v1 "github.com/soltiHQ/control-plane/api/v1"
+	"github.com/soltiHQ/control-plane/internal/ui/routepath"
+	"github.com/soltiHQ/control-plane/ui/templates/component/card"
+	"github.com/soltiHQ/control-plane/ui/templates/component/search"
+	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
+)
+
+templ Tasks(agentID string, items []v1.Task, total int, slot string, offset int) {
+	@card.Card("") {
+		@card.CardHeader() {
+			<h2 class="text-[11px] font-mono uppercase tracking-[0.14em] text-muted select-none">
+				Tasks
+			</h2>
+			<span class="text-[11px] font-mono text-muted tabular-nums">
+				{ fmt.Sprintf("%d", total) }
+			</span>
+		}
+
+		@card.CardBody() {
+			<div class="mb-4">
+				@search.Input(
+					"tasks-search",
+					"slot",
+					slot,
+					"Filter by slot…",
+					routepath.ApiAgentTasks(agentID),
+					"#tasks-results",
+				)
+			</div>
+
+			@TaskResults(agentID, items, total, slot, offset)
+		}
+	}
+}
+
+templ TaskResults(agentID string, items []v1.Task, total int, slot string, offset int) {
+	<div id="tasks-results">
+		<div id="tasks-rows" class="divide-y divide-border -mx-5">
+			@TaskRows(items)
+		</div>
+
+		<div id="tasks-footer">
+			@TaskFooter(agentID, total, slot, offset, len(items))
+		</div>
+	</div>
+}
+
+templ TaskRows(items []v1.Task) {
+	if len(items) == 0 {
+		<div class="px-5 py-8 text-center text-sm text-muted">No tasks found.</div>
+	} else {
+		for _, t := range items {
+			@taskRow(t)
+		}
+	}
+}
+
+templ taskRow(t v1.Task) {
+	<div class="px-5 py-3 space-y-1.5">
+		<div class="flex items-center justify-between gap-3">
+			<div class="flex items-center gap-2 min-w-0">
+				@taskStatusBadge(t.Status)
+				<span class="text-sm font-medium text-fg truncate">{ t.Slot }</span>
+			</div>
+
+			if t.Attempt > 0 {
+				<span class="shrink-0 text-[10px] font-mono text-muted tabular-nums">
+					#{ fmt.Sprintf("%d", t.Attempt) }
+				</span>
+			}
+		</div>
+
+		<div class="text-[11px] font-mono text-muted tracking-wide truncate">
+			{ t.ID }
+		</div>
+
+		if t.Error != "" {
+			<div class="text-xs text-danger/80 break-words leading-snug">
+				{ t.Error }
+			</div>
+		}
+	</div>
+}
+
+templ taskStatusBadge(status string) {
+	switch status {
+		case "running":
+			@visual.Badge("running", visual.VariantPrimary) {
+				<span class="relative flex h-1.5 w-1.5">
+					<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60"></span>
+					<span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary"></span>
+				</span>
+			}
+		case "succeeded":
+			@visual.Badge("succeeded", visual.VariantSuccess)
+		case "failed":
+			@visual.Badge("failed", visual.VariantDanger)
+		case "pending":
+			@visual.Badge("pending", visual.VariantMuted)
+		case "timeout":
+			@visual.Badge("timeout", visual.VariantDanger)
+		case "canceled":
+			@visual.Badge("canceled", visual.VariantMuted)
+		case "exhausted":
+			@visual.Badge("exhausted", visual.VariantDanger)
+		default:
+			@visual.Badge(status, visual.VariantMuted)
+	}
+}
+
+templ TaskFooter(agentID string, total int, slot string, offset int, count int) {
+	if nextOffset(offset, count) < total {
+		<div
+			id="tasks-sentinel"
+			class="h-6"
+			hx-get={ tasksURL(agentID, slot, nextOffset(offset, count)) }
+			hx-trigger="revealed"
+			hx-target="#tasks-rows"
+			hx-swap="beforeend"
+			hx-sync="#tasks-sentinel:replace"
+		></div>
+	}
+}
+
+func nextOffset(offset int, count int) int {
+	return offset + count
+}
+
+func tasksURL(agentID string, slot string, offset int) string {
+	v := url.Values{}
+	if slot != "" {
+		v.Set("slot", slot)
+	}
+	if offset > 0 {
+		v.Set("offset", strconv.Itoa(offset))
+	}
+	qs := v.Encode()
+	base := routepath.ApiAgentTasks(agentID)
+	if qs == "" {
+		return base
+	}
+	return base + "?" + qs
+}
