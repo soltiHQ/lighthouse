@@ -9,8 +9,8 @@ templ KV(label string, value string, mono bool) {
 			v := value
 			if v == "" { v = "—" }
 
-			cls := "text-sm text-fg break-words leading-snug"
-			if mono { cls = "text-sm font-mono text-fg break-all leading-snug" }
+			cls := "text-base text-fg break-words leading-snug"
+			if mono { cls = "text-base font-mono text-fg break-all leading-snug" }
 			if v == "—" { cls = cls + " text-fg/60" }
 		}}
 
