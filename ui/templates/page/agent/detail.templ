@@ -4,38 +4,22 @@ import (
 	"github.com/soltiHQ/control-plane/internal/ui/policy"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/internal/ui/trigger"
-	"github.com/soltiHQ/control-plane/ui/templates/component/status"
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 )
 
 templ Detail(nav policy.Nav, agentID string) {
-	@layout.App("Agent", "agents", nav) {
-		<div class="p-6 lg:h-[calc(100vh-3rem)]">
-			<div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 items-start h-full">
-
-				<div
-					id="agent-identity"
-					hx-get={ routepath.ApiAgentByID(agentID) }
-					hx-trigger={ "load, " + trigger.Every1m + ", " + trigger.AgentUpdate + " from:body" }
-					hx-target="this"
-					hx-swap="innerHTML"
-					class="lg:sticky lg:top-6 min-h-[140px]"
-				>
-					@status.Preload("Details Loading...")
-				</div>
-
-				<div
-					id="agent-tasks"
-					hx-get={ routepath.ApiAgentTasks(agentID) }
-					hx-trigger={ "load, " + trigger.AgentTasksRefresh }
-					hx-target="this"
-					hx-swap="innerHTML"
-					class="lg:h-full lg:overflow-y-auto lg:pr-2 min-h-[140px]"
-				>
-					@status.Preload("Loading tasks...")
-				</div>
-
-			</div>
-		</div>
-	}
+	@layout.DetailPage("Agent", "agents", nav,
+		layout.DetailPanel{
+			ID:         "agent-identity",
+			URL:        routepath.ApiAgentByID(agentID),
+			Trigger:    "load, " + trigger.Every1m + ", " + trigger.AgentUpdate + " from:body",
+			PreloadMsg: "Details Loading...",
+		},
+		layout.DetailPanel{
+			ID:         "agent-tasks",
+			URL:        routepath.ApiAgentTasks(agentID),
+			Trigger:    "load, " + trigger.AgentTasksRefresh,
+			PreloadMsg: "Loading tasks...",
+		},
+	)
 }

@@ -6,42 +6,26 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/asset"
 	"github.com/soltiHQ/control-plane/ui/templates/component/button"
 	"github.com/soltiHQ/control-plane/ui/templates/component/modal"
-	"github.com/soltiHQ/control-plane/ui/templates/component/status"
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 	contentUser "github.com/soltiHQ/control-plane/ui/templates/content/user"
 )
 
 templ Users(nav policy.Nav) {
-	@layout.App("Users", "users", nav) {
-		<div class="space-y-6">
-			<div class="flex items-center justify-between">
-				<h1 class="text-2xl font-bold text-fg">
-					Users management
-				</h1>
-
-				if nav.CanAddUser {
-					@button.Button("Add", "button", false, button.VariantPrimary, false,
-						templ.Attributes{"x-data": "", "x-on:click": modal.OpenEvent("create-user")},
-					) {
-						@asset.Icon("add")
-					}
+	@layout.ListPage("Users", "users", nav) {
+		@layout.ListHeader("Users management") {
+			if nav.CanAddUser {
+				@button.Button("Add", "button", false, button.VariantPrimary, false,
+					templ.Attributes{"x-data": "", "x-on:click": modal.OpenEvent("create-user")},
+				) {
+					@asset.Icon("add")
 				}
-			</div>
-
-			<div
-				id="users-list"
-				hx-get={ routepath.ApiUsers }
-				hx-trigger="load"
-				hx-target="this"
-				hx-swap="innerHTML"
-				class="min-h-[120px]"
-			>
-				@status.Preload("Loading...")
-			</div>
-		</div>
-
-		if nav.CanAddUser {
-			@contentUser.CreateModal()
+			}
 		}
+
+		@layout.HTMXLoader("users-list", routepath.ApiUsers, "load", "Loading...")
+	}
+
+	if nav.CanAddUser {
+		@contentUser.CreateModal()
 	}
 }

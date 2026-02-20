@@ -4,38 +4,22 @@ import (
 	"github.com/soltiHQ/control-plane/internal/ui/policy"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/internal/ui/trigger"
-	"github.com/soltiHQ/control-plane/ui/templates/component/status"
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 )
 
 templ Detail(nav policy.Nav, userID string) {
-	@layout.App("User", "users", nav) {
-		<div class="p-6 lg:h-[calc(100vh-3rem)]">
-			<div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 items-start h-full">
-
-				<div
-					id="user-identity"
-					hx-get={ routepath.ApiUserCrudOp(userID) }
-					hx-trigger={ "load once, " + trigger.UserUpdate + " from:body" }
-					hx-target="this"
-					hx-swap="innerHTML"
-					class="lg:sticky lg:top-6 min-h-[140px]"
-				>
-					@status.Preload("Details Loading...")
-				</div>
-
-				<div
-					id="user-sessions"
-					hx-get={ routepath.ApiUserSessions(userID) }
-					hx-trigger={ "load once, " + trigger.UserSessionUpdate + " from:body, " + trigger.UserSessionsRefresh }
-					hx-target="this"
-					hx-swap="innerHTML"
-					class="lg:h-full lg:overflow-y-auto lg:pr-2"
-				>
-					@status.Preload("Sessions Loading...")
-				</div>
-
-			</div>
-		</div>
-	}
+	@layout.DetailPage("User", "users", nav,
+		layout.DetailPanel{
+			ID:         "user-identity",
+			URL:        routepath.ApiUserCrudOp(userID),
+			Trigger:    "load once, " + trigger.UserUpdate + " from:body",
+			PreloadMsg: "Details Loading...",
+		},
+		layout.DetailPanel{
+			ID:         "user-sessions",
+			URL:        routepath.ApiUserSessions(userID),
+			Trigger:    "load once, " + trigger.UserSessionUpdate + " from:body, " + trigger.UserSessionsRefresh,
+			PreloadMsg: "Sessions Loading...",
+		},
+	)
 }

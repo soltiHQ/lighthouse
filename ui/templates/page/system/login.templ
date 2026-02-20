@@ -2,17 +2,14 @@ package system
 
 import (
 	"github.com/soltiHQ/control-plane/ui/templates/asset"
-	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 	"github.com/soltiHQ/control-plane/ui/templates/component/form"
 	"github.com/soltiHQ/control-plane/ui/templates/component/button"
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 )
 
 templ Login(redirectURL string, errMsg string) {
-	@layout.Root("Login") {
-		<div class="relative min-h-screen bg-bg text-fg flex items-center justify-center px-4 overflow-hidden">
-			@visual.BackgroundCircle()
-
+	@layout.Centered("Login") {
+		<div class="flex items-center justify-center min-h-screen px-4">
 			<div class="relative w-full max-w-sm">
 				<div class="text-center space-y-3">
 					<h1 class="flex items-center justify-center gap-3 text-3xl font-semibold tracking-tight text-fg">
