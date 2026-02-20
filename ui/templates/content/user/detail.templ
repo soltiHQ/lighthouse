@@ -11,10 +11,12 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
+// Detail renders the user identity card with roles, permissions, and actions.
 templ Detail(apiUser v1.User, p policy.UserDetail) {
 	@Identity(apiUser, p)
 }
 
+// Identity renders the user info card body (returned as an HTMX fragment).
 templ Identity(u v1.User, p policy.UserDetail) {
 	@card.Card("") {
 		@card.CardBody() {

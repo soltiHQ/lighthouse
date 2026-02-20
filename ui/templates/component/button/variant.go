@@ -1,5 +1,6 @@
 package button
 
+// Variant controls the visual style of a button.
 type Variant string
 
 const (

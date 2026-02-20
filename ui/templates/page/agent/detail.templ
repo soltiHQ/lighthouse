@@ -7,6 +7,7 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 )
 
+// Detail renders the agent detail page with sidebar + tasks panels.
 templ Detail(nav policy.Nav, agentID string) {
 	@layout.DetailPage("Agent", "agents", nav,
 		layout.DetailPanel{

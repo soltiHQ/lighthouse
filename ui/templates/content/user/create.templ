@@ -5,6 +5,7 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/component/modal"
 )
 
+// CreateModal wraps modal.Create with user-specific fields.
 templ CreateModal() {
 	@modal.Create(
 		"create-user",

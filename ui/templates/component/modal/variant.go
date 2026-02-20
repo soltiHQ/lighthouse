@@ -2,6 +2,7 @@ package modal
 
 import "github.com/soltiHQ/control-plane/ui/templates/component/button"
 
+// Variant controls the visual style of modal action buttons.
 type Variant string
 
 const (
@@ -17,6 +18,7 @@ func buttonVariant(v Variant) button.Variant {
 	return button.VariantPrimary
 }
 
+// Method is the HTTP method for modal form submissions.
 type Method string
 
 const (

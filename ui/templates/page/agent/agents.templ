@@ -7,6 +7,7 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 )
 
+// Agents renders the agent list page with HTMX auto-refresh.
 templ Agents(nav policy.Nav) {
 	@layout.ListPage("Agents", "agents", nav) {
 		@layout.ListHeader("Agents")

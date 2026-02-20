@@ -10,6 +10,7 @@ import (
 	contentUser "github.com/soltiHQ/control-plane/ui/templates/content/user"
 )
 
+// Users renders the user list page with optional "Add" button.
 templ Users(nav policy.Nav) {
 	@layout.ListPage("Users", "users", nav) {
 		@layout.ListHeader("Users management") {

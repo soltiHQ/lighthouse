@@ -10,6 +10,7 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
+// Sessions renders the active sessions card for a user.
 templ Sessions(items []v1.Session) {
 	@card.Card("") {
 		@card.CardHeader() {

@@ -12,6 +12,7 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
+// Tasks renders the paginated task table for a specific agent.
 templ Tasks(agentID string, items []v1.Task, total int, slot string, offset int) {
 	@card.Card("") {
 		@card.CardHeader() {
@@ -40,6 +41,7 @@ templ Tasks(agentID string, items []v1.Task, total int, slot string, offset int)
 	}
 }
 
+// TaskResults is the HTMX-swappable wrapper for task rows + pagination.
 templ TaskResults(agentID string, items []v1.Task, total int, slot string, offset int) {
 	<div id="tasks-results">
 		<div id="tasks-rows" class="divide-y divide-border -mx-5">
@@ -52,6 +54,7 @@ templ TaskResults(agentID string, items []v1.Task, total int, slot string, offse
 	</div>
 }
 
+// TaskRows renders table rows for a slice of tasks.
 templ TaskRows(items []v1.Task) {
 	if len(items) == 0 {
 		<div class="px-5 py-8 text-center text-sm text-muted">No tasks found.</div>
@@ -112,6 +115,7 @@ templ taskStatusBadge(s string) {
 	}
 }
 
+// TaskFooter renders the "Load more" button for offset-based task pagination.
 templ TaskFooter(agentID string, total int, slot string, offset int, count int) {
 	if nextOffset(offset, count) < total {
 		<div

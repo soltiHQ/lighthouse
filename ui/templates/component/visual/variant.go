@@ -1,5 +1,6 @@
 package visual
 
+// Variant controls the color scheme of visual elements (badges, dots, etc.).
 type Variant string
 
 const (

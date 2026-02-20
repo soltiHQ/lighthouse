@@ -6,8 +6,13 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/component/status"
 )
 
-// Edit is a pre-built edit modal with a form that sends JSON.
-// Fields are static inputs; selects are async multi-selects loaded from API.
+// Edit is a pre-built edit modal with a form that sends JSON via PUT.
+//
+//   - name:      Alpine event name (e.g. "edit-user")
+//   - titleText: heading shown in the modal
+//   - action:    PUT URL for the form submission
+//   - fields:    static text inputs
+//   - selects:   async multi-selects loaded from API
 templ Edit(
 	name string,
 	titleText string,

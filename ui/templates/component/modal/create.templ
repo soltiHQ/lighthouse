@@ -7,7 +7,12 @@ import (
 )
 
 // Create is a pre-built creation modal with a form that sends JSON via POST.
-// Fields are static inputs; selects are async multi-selects loaded from API.
+//
+//   - name:      Alpine event name (e.g. "create-user")
+//   - titleText: heading shown in the modal
+//   - action:    POST URL for the form submission
+//   - fields:    static text inputs
+//   - selects:   async multi-selects loaded from API
 templ Create(
 	name string,
 	titleText string,

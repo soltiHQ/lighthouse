@@ -5,6 +5,7 @@ import (
     "github.com/soltiHQ/control-plane/ui/templates/component/nav"
 )
 
+// App renders the authenticated shell: sidebar nav + main content area.
 templ App(title string, active string, n policy.Nav) {
 	@Root(title) {
 		@nav.VBar(active, n)

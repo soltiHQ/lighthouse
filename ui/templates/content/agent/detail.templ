@@ -13,10 +13,12 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
+// Detail renders the agent identity card with labels editor and action buttons.
 templ Detail(a v1.Agent, p policy.AgentDetail) {
 	@Identity(a, p)
 }
 
+// Identity renders the agent info card body (returned as an HTMX fragment).
 templ Identity(a v1.Agent, p policy.AgentDetail) {
 	@card.Card("") {
 		@card.CardBody() {
