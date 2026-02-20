@@ -8,24 +8,26 @@ import (
 	v1 "github.com/soltiHQ/control-plane/api/v1"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/ui/templates/component/card"
-	"github.com/soltiHQ/control-plane/ui/templates/component/search"
+	"github.com/soltiHQ/control-plane/ui/templates/component/form"
+	"github.com/soltiHQ/control-plane/ui/templates/component/status"
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
+// Tasks renders the paginated task table for a specific agent.
 templ Tasks(agentID string, items []v1.Task, total int, slot string, offset int) {
 	@card.Card("") {
 		@card.CardHeader() {
-			<h2 class="text-[11px] font-mono uppercase tracking-[0.14em] text-muted select-none">
+			<h2 class="text-[11px] uppercase tracking-[0.05em] text-muted select-none">
 				Tasks
 			</h2>
-			<span class="text-[11px] font-mono text-muted tabular-nums">
+			<span class="text-[11px] text-muted tabular-nums">
 				{ fmt.Sprintf("%d", total) }
 			</span>
 		}
 
 		@card.CardBody() {
 			<div class="mb-4">
-				@search.Input(
+				@form.SearchInput(
 					"tasks-search",
 					"slot",
 					slot,
@@ -40,6 +42,7 @@ templ Tasks(agentID string, items []v1.Task, total int, slot string, offset int)
 	}
 }
 
+// TaskResults is the HTMX-swappable wrapper for task rows + pagination.
 templ TaskResults(agentID string, items []v1.Task, total int, slot string, offset int) {
 	<div id="tasks-results">
 		<div id="tasks-rows" class="divide-y divide-border -mx-5">
@@ -52,9 +55,10 @@ templ TaskResults(agentID string, items []v1.Task, total int, slot string, offse
 	</div>
 }
 
+// TaskRows renders table rows for a slice of tasks.
 templ TaskRows(items []v1.Task) {
 	if len(items) == 0 {
-		<div class="px-5 py-8 text-center text-sm text-muted">No tasks found.</div>
+		@status.Empty("No tasks found")
 	} else {
 		for _, t := range items {
 			@taskRow(t)
@@ -71,7 +75,7 @@ templ taskRow(t v1.Task) {
 			</div>
 
 			if t.Attempt > 0 {
-				<span class="shrink-0 text-[10px] font-mono text-muted tabular-nums">
+				<span class="shrink-0 text-[11px] text-muted tabular-nums">
 					#{ fmt.Sprintf("%d", t.Attempt) }
 				</span>
 			}
@@ -89,14 +93,11 @@ templ taskRow(t v1.Task) {
 	</div>
 }
 
-templ taskStatusBadge(status string) {
-	switch status {
+templ taskStatusBadge(s string) {
+	switch s {
 		case "running":
 			@visual.Badge("running", visual.VariantPrimary) {
-				<span class="relative flex h-1.5 w-1.5">
-					<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60"></span>
-					<span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary"></span>
-				</span>
+				@visual.StatusDot("primary")
 			}
 		case "succeeded":
 			@visual.Badge("succeeded", visual.VariantSuccess)
@@ -111,10 +112,11 @@ templ taskStatusBadge(status string) {
 		case "exhausted":
 			@visual.Badge("exhausted", visual.VariantDanger)
 		default:
-			@visual.Badge(status, visual.VariantMuted)
+			@visual.Badge(s, visual.VariantMuted)
 	}
 }
 
+// TaskFooter renders the "Load more" button for offset-based task pagination.
 templ TaskFooter(agentID string, total int, slot string, offset int, count int) {
 	if nextOffset(offset, count) < total {
 		<div

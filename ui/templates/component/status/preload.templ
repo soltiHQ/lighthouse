@@ -1,7 +1,8 @@
-package datagrid
+package status
 
 import "github.com/soltiHQ/control-plane/ui/templates/asset"
 
+// Preload renders a loading spinner with a message.
 templ Preload(message string) {
 	<div class={ containerClass("py-10") }>
 		<div class="text-primary scale-[5]">

@@ -1,4 +1,4 @@
-package datagrid
+package status
 
 func containerClass(padY string) string {
 	return "col-span-full flex flex-col items-center justify-center text-center " + padY

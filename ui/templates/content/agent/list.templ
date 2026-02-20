@@ -6,15 +6,18 @@ import (
 
 	"github.com/soltiHQ/control-plane/domain/model"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
-	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
-	"github.com/soltiHQ/control-plane/ui/templates/component/search"
+	"github.com/soltiHQ/control-plane/ui/templates/component/card"
+	"github.com/soltiHQ/control-plane/ui/templates/component/form"
+	"github.com/soltiHQ/control-plane/ui/templates/component/status"
+	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
+// List renders the paginated agent list with search and cursor-based loading.
 templ List(items []*model.Agent, nextCursor string, q string) {
 	<div class="space-y-4">
 		<div class="flex justify-center mb-10">
 			<div class="w-[320px] max-sm:w-full">
-				@search.Input(
+				@form.SearchInput(
 					"agents-search",
 					"q",
 					q,
@@ -29,6 +32,7 @@ templ List(items []*model.Agent, nextCursor string, q string) {
 	</div>
 }
 
+// Results is the HTMX-swappable wrapper for the agent cards + pagination footer.
 templ Results(items []*model.Agent, nextCursor string, q string) {
 	<div id="agents-results" class="space-y-4">
 		<div id="agents-cards" class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -41,82 +45,65 @@ templ Results(items []*model.Agent, nextCursor string, q string) {
 	</div>
 }
 
+// Cards renders the grid of agent item cards.
 templ Cards(items []*model.Agent) {
 	if len(items) == 0 {
-		@datagrid.Empty("No agents found")
+		@status.Empty("No agents found")
 	} else {
 		for _, a := range items {
-			<a
-				href={ templ.SafeURL(routepath.PageAgentInfoByID(a.ID())) }
-				class="
-					group relative
-					rounded-[var(--r-6)] border border-border bg-card
-					p-4
-					block cursor-pointer [&_*]:cursor-pointer
-					transition-all duration-200
-					hover:border-primary/40
-					hover:shadow-[var(--shadow)]
-				"
-			>
-				<!-- status + name + uptime -->
-				<div class="flex items-center gap-2.5 mb-3">
-					<span class="relative flex h-2 w-2 shrink-0">
-						<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/60"></span>
-						<span class="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
-					</span>
-
-					<span class="text-sm font-semibold text-fg truncate">
-						if a.Name() != "" {
-							{ a.Name() }
-						} else {
-							{ a.ID() }
-						}
-					</span>
+			@card.Item(routepath.PageAgentInfoByID(a.ID())) {
+				@card.ItemHeader() {
+					@card.ItemTitle() {
+						<div class="flex items-center gap-2.5">
+							@visual.StatusDot("success")
+							<span class="truncate">
+								if a.Name() != "" {
+									{ a.Name() }
+								} else {
+									{ a.ID() }
+								}
+							</span>
+						</div>
+					}
 
 					if a.UptimeSeconds() > 0 {
-						<span class="ml-auto text-[10px] font-mono text-muted tabular-nums shrink-0">
+						<span class="text-[11px] text-muted tabular-nums shrink-0">
 							{ formatUptime(a.UptimeSeconds()) }
 						</span>
 					}
-				</div>
-
-				<!-- id -->
-				if a.Name() != "" {
-					<div class="text-[11px] font-mono text-muted tracking-wide truncate mb-3">
-						{ a.ID() }
-					</div>
 				}
 
-				<!-- endpoint -->
-				if a.Endpoint() != "" {
-					<div class="text-xs text-muted-strong truncate mb-3">
-						{ a.Endpoint() }
+				@card.ItemBody() {
+					if a.Name() != "" {
+						<div class="text-[11px] font-mono text-muted tracking-wide">
+							{ a.ID() }
+						</div>
+					}
+
+					if a.Endpoint() != "" {
+						<div class="text-xs text-muted-strong">
+							{ a.Endpoint() }
+						</div>
+					}
+
+					<div class="flex items-center gap-1.5 flex-wrap">
+						if a.Platform() != "" {
+							@visual.Badge(a.Platform(), visual.VariantPrimary)
+						}
+						if a.OS() != "" {
+							@visual.Badge(a.OS(), visual.VariantMuted)
+						}
+						if a.Arch() != "" {
+							@visual.Badge(a.Arch(), visual.VariantMuted)
+						}
 					</div>
 				}
-
-				<!-- platform pills -->
-				<div class="flex items-center gap-1.5 flex-wrap">
-					if a.Platform() != "" {
-						<span class="inline-flex items-center rounded-full bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary/80">
-							{ a.Platform() }
-						</span>
-					}
-					if a.OS() != "" {
-						<span class="inline-flex items-center rounded-full bg-fg/5 px-2 py-0.5 text-[10px] font-medium text-muted-strong">
-							{ a.OS() }
-						</span>
-					}
-					if a.Arch() != "" {
-						<span class="inline-flex items-center rounded-full bg-fg/5 px-2 py-0.5 text-[10px] font-medium text-muted-strong">
-							{ a.Arch() }
-						</span>
-					}
-				</div>
-			</a>
+			}
 		}
 	}
 }
 
+// Footer renders the "Load more" button for cursor-based pagination.
 templ Footer(nextCursor string, q string) {
 	if nextCursor != "" {
 		<div

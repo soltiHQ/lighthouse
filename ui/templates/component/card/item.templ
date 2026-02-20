@@ -1,13 +1,15 @@
 package card
 
+// Item renders a compact card for list entries; links when href is set.
 templ Item(href string) {
 	{{
 		base := `
-			rounded-[var(--r-6)]
+			rounded-[var(--r-md)]
 			border border-border
 			bg-card
 			p-4
 			space-y-2
+			min-w-0
 		`
 	}}
 	if href != "" {
@@ -22,19 +24,19 @@ templ Item(href string) {
 }
 
 templ ItemHeader() {
-	<div class="flex items-center justify-between">
+	<div class="flex items-center justify-between gap-2 min-w-0">
 		{ children... }
 	</div>
 }
 
 templ ItemTitle() {
-	<div class="text-sm font-semibold text-fg">
+	<div class="text-sm font-semibold text-fg truncate min-w-0">
 		{ children... }
 	</div>
 }
 
 templ ItemBody() {
-	<div class="space-y-1">
+	<div class="space-y-1 min-w-0 [&>*]:truncate">
 		{ children... }
 	</div>
 }

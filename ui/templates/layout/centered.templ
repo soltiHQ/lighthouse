@@ -1,0 +1,15 @@
+package layout
+
+import "github.com/soltiHQ/control-plane/ui/templates/component/visual"
+
+// Centered renders a full-screen layout with a decorative background circle.
+// Used for system pages like login and error.
+templ Centered(title string) {
+	@Root(title) {
+		<div class="relative min-h-screen bg-bg text-fg overflow-hidden">
+			@visual.BackgroundCircle()
+
+			{ children... }
+		</div>
+	}
+}

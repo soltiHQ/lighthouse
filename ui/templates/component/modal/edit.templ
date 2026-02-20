@@ -1,12 +1,18 @@
 package modal
 
 import (
+	"github.com/soltiHQ/control-plane/ui/templates/component/button"
 	"github.com/soltiHQ/control-plane/ui/templates/component/form"
-	"github.com/soltiHQ/control-plane/ui/templates/component/datagrid"
+	"github.com/soltiHQ/control-plane/ui/templates/component/status"
 )
 
-// Edit is a pre-built edit modal with a form that sends JSON.
-// Fields are static inputs; selects are async multi-selects loaded from API.
+// Edit is a pre-built edit modal with a form that sends JSON via PUT.
+//
+//   - name:      Alpine event name (e.g. "edit-user")
+//   - titleText: heading shown in the modal
+//   - action:    PUT URL for the form submission
+//   - fields:    static text inputs
+//   - selects:   async multi-selects loaded from API
 templ Edit(
 	name string,
 	titleText string,
@@ -22,7 +28,7 @@ templ Edit(
 		>
 			<!-- preloader -->
 			<div x-show="loading" class={ formBody }>
-				@datagrid.Preload("Loading...")
+				@status.Preload("Loading...")
 			</div>
 
 			<!-- form content -->
@@ -103,14 +109,12 @@ templ Edit(
 
 				@Footer() {
 					@CancelButton("Cancel")
-					<button
-						type="submit"
-						class={ confirmButtonStyle(VariantDefault) }
-						x-bind:disabled="submitting"
-					>
+					@button.Button("", "submit", false, button.VariantPrimary, false,
+						templ.Attributes{"x-bind:disabled": "submitting"},
+					) {
 						<span x-show="!submitting">Save</span>
 						<span x-show="submitting" x-cloak>Saving...</span>
-					</button>
+					}
 				}
 			</div>
 		</form>

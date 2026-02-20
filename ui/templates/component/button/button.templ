@@ -1,11 +1,15 @@
 package button
 
+import "github.com/soltiHQ/control-plane/ui/templates/component/attrs"
+
+// Button renders a styled button with variant, size, and optional extra attrs.
 templ Button(
 	label string,
 	typ string,
 	fullWidth bool,
 	variant Variant,
 	disabled bool,
+	a ...templ.Attributes,
 ) {
 	{{
 		width := ""
@@ -14,20 +18,24 @@ templ Button(
 		}
 
 		base := "inline-flex items-center justify-center gap-2 " +
-			"h-10 px-4 " +
+			"h-10 px-4 cursor-pointer " +
 			"disabled:opacity-50 disabled:pointer-events-none " +
 			"transition-all duration-200 " +
 			width
 
-		className := base + radiusFor(variant) + styleFor(variant, false) + focusFor(variant)
+		className := base + radiusFor(variant) + styleFor(variant) + focusFor(variant)
+		extra := attrs.Merge(a)
 	}}
 
 	<button
 		type={ typ }
 		disabled?={ disabled }
 		class={ className }
+		{ extra... }
 	>
 		{ children... }
-		<span>{ label }</span>
+		if label != "" {
+			<span>{ label }</span>
+		}
 	</button>
 }

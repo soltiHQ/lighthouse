@@ -1,0 +1,47 @@
+package layout
+
+import (
+	"github.com/soltiHQ/control-plane/internal/ui/policy"
+	"github.com/soltiHQ/control-plane/ui/templates/component/status"
+)
+
+// DetailPanel describes one HTMX-loaded panel inside a detail page.
+type DetailPanel struct {
+	ID         string
+	URL        string
+	Trigger    string
+	PreloadMsg string
+}
+
+// DetailPage renders a two-column sticky sidebar + scrollable main layout.
+templ DetailPage(title string, active string, nav policy.Nav, sidebar DetailPanel, main DetailPanel) {
+	@App(title, active, nav) {
+		<div class="p-6 lg:h-[calc(100vh-3rem)]">
+			<div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 items-start h-full">
+
+				<div
+					id={ sidebar.ID }
+					hx-get={ sidebar.URL }
+					hx-trigger={ sidebar.Trigger }
+					hx-target="this"
+					hx-swap="innerHTML"
+					class="lg:sticky lg:top-6 min-h-[140px]"
+				>
+					@status.Preload(sidebar.PreloadMsg)
+				</div>
+
+				<div
+					id={ main.ID }
+					hx-get={ main.URL }
+					hx-trigger={ main.Trigger }
+					hx-target="this"
+					hx-swap="innerHTML"
+					class="lg:h-full lg:overflow-y-auto lg:pr-2 min-h-[140px]"
+				>
+					@status.Preload(main.PreloadMsg)
+				</div>
+
+			</div>
+		</div>
+	}
+}
