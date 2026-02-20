@@ -1,17 +1,16 @@
 package visual
 
 // KV renders a key-value pair with an optional monospace font and copy-on-click.
-templ KV(label string, value string, mono bool) {
+// Long values are auto-truncated to "start…end" and copyable.
+templ KV(label string, value string) {
 	<div class="min-w-0">
-		<dt class="text-[11px] font-mono uppercase tracking-[0.1em] text-muted mb-0.5">{ label }</dt>
+		<dt class="text-[11px] uppercase tracking-[0.1em] text-muted mb-0.5">{ label }</dt>
 
 		if value != "" {
-			{{
-				cls := "text-base text-fg break-words leading-snug"
-				if mono { cls = "text-base font-mono text-fg break-all leading-snug" }
-			}}
 			<dd>
-				@Copy(value) { <span class={ cls }>{ value }</span> }
+				@Copy(value) {
+					@Truncate(value, "text-base text-fg leading-snug")
+				}
 			</dd>
 		} else {
 			<dd class="text-sm italic text-muted">Not set</dd>

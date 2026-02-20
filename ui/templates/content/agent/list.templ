@@ -75,13 +75,13 @@ templ Cards(items []*model.Agent) {
 
 				@card.ItemBody() {
 					if a.Name() != "" {
-						<div class="text-[11px] font-mono text-muted tracking-wide truncate">
+						<div class="text-[11px] font-mono text-muted tracking-wide">
 							{ a.ID() }
 						</div>
 					}
 
 					if a.Endpoint() != "" {
-						<div class="text-xs text-muted-strong truncate">
+						<div class="text-xs text-muted-strong">
 							{ a.Endpoint() }
 						</div>
 					}

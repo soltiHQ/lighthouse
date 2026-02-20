@@ -1,0 +1,14 @@
+package visual
+
+// Truncate renders text that auto-clips to "start…end" when it overflows the available space.
+templ Truncate(text string, cls string) {
+	<span
+		x-data="truncate"
+		data-full={ text }
+		title={ text }
+		class={ "block overflow-hidden min-w-0 " + cls }
+	>
+		<span x-ref="display" class="whitespace-nowrap block overflow-hidden">{ text }</span>
+		<span x-ref="measure" class="invisible fixed whitespace-nowrap pointer-events-none" style="font:inherit" aria-hidden="true"></span>
+	</span>
+}

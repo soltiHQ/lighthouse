@@ -2,6 +2,7 @@ package user
 
 import (
 	"fmt"
+	"time"
 
 	v1 "github.com/soltiHQ/control-plane/api/v1"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
@@ -26,9 +27,11 @@ templ Sessions(items []v1.Session) {
 
 		@card.CardBody() {
 			if len(items) == 0 {
-				<p class="text-sm text-muted">No active sessions.</p>
+				<div class="py-8 text-center">
+					<p class="text-sm text-muted">No active sessions</p>
+				</div>
 			} else {
-				<div class="divide-y divide-border -mx-4">
+				<div class="divide-y divide-border -mx-5">
 					for _, s := range items {
 						@sessionRow(s)
 					}
@@ -38,36 +41,64 @@ templ Sessions(items []v1.Session) {
 	}
 }
 
+// sessionRow renders a single session entry.
 templ sessionRow(s v1.Session) {
-	<div class="px-4 py-4 flex items-start justify-between gap-4">
-		<div class="min-w-0 space-y-1.5">
-			<div class="flex items-center gap-2.5">
-				<span class="text-sm font-medium text-fg">{ s.AuthKind }</span>
+	{{
+		expired := !s.ExpiresAt.IsZero() && s.ExpiresAt.Before(time.Now())
+		dimmed := s.Revoked || expired
+	}}
 
+	<div class={ "px-5 py-4", templ.KV("opacity-60", dimmed) }>
+		<div class="flex items-center justify-between gap-4 mb-2">
+			<div class="flex items-center gap-2.5 min-w-0">
 				if s.Revoked {
-					@visual.Badge("Revoked", visual.VariantDanger)
+					@visual.StatusDot("muted")
+				} else if expired {
+					@visual.StatusDot("muted")
 				} else {
-					@visual.Badge("Active", visual.VariantSuccess)
+					@visual.StatusDot("success")
 				}
+				<span class="text-sm font-medium text-fg">{ s.AuthKind }</span>
 			</div>
 
-			<div class="flex items-center gap-1.5 text-xs text-muted">
-				<span>{ s.CreatedAt.Format("2006-01-02 15:04") }</span>
-				<span class="text-border">→</span>
-				<span>{ s.ExpiresAt.Format("2006-01-02 15:04") }</span>
-			</div>
-
-			<div class="text-[11px] font-mono text-fg/40 break-all leading-relaxed">
-				{ s.ID }
-			</div>
+			if !s.Revoked && !expired {
+				<div class="shrink-0">
+					<form hx-post={ routepath.ApiUserRevokeSession(s.ID) } hx-swap="none">
+						@button.Button("Revoke", "submit", false, button.VariantDanger, false)
+					</form>
+				</div>
+			} else {
+				<span class="text-xs text-muted italic">
+					if s.Revoked {
+						Revoked
+					} else {
+						Expired
+					}
+				</span>
+			}
 		</div>
 
-		if !s.Revoked {
-			<div class="shrink-0 pt-0.5">
-				<form hx-post={ routepath.ApiUserRevokeSession(s.ID) } hx-swap="none">
-					@button.Button("Revoke", "submit", false, button.VariantDanger, false)
-				</form>
-			</div>
-		}
+		<div class="flex items-center gap-4 text-xs text-muted pl-[18px]">
+			<span title="Created">{ formatSessionTime(s.CreatedAt) }</span>
+			<span class="text-border">→</span>
+			<span title="Expires">{ formatSessionTime(s.ExpiresAt) }</span>
+		</div>
+
+		<div class="mt-1 pl-[18px] min-w-0">
+			@visual.Copy(s.ID) {
+				@visual.Truncate(s.ID, "text-[10px] font-mono text-fg/40")
+			}
+		</div>
 	</div>
+}
+
+func formatSessionTime(t time.Time) string {
+	if t.IsZero() {
+		return "—"
+	}
+	now := time.Now()
+	if t.Year() == now.Year() {
+		return t.Format("Jan 02, 15:04")
+	}
+	return t.Format("Jan 02 2006, 15:04")
 }

@@ -30,14 +30,14 @@ templ Identity(a v1.Agent, p policy.AgentDetail) {
 				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
 					<div class="space-y-3 min-w-0">
 						<dl class="space-y-3">
-							@visual.KV("Agent ID", a.ID, true)
-							@visual.KV("Name", a.Name, false)
-							@visual.KV("Endpoint", a.Endpoint, false)
-							@visual.KV("Platform", a.Platform, false)
-							@visual.KV("OS", a.OS, false)
-							@visual.KV("Arch", a.Arch, false)
+							@visual.KV("Agent ID", a.ID)
+							@visual.KV("Name", a.Name)
+							@visual.KV("Endpoint", a.Endpoint)
+							@visual.KV("Platform", a.Platform)
+							@visual.KV("OS", a.OS)
+							@visual.KV("Arch", a.Arch)
 							if a.UptimeSeconds > 0 {
-								@visual.KV("Uptime", formatUptime(a.UptimeSeconds), false)
+								@visual.KV("Uptime", formatUptime(a.UptimeSeconds))
 							}
 						</dl>
 					</div>

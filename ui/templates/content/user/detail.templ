@@ -46,8 +46,8 @@ templ Identity(u v1.User, p policy.UserDetail) {
 		@card.CardBody() {
 			<div class="flex flex-col gap-6">
 				<dl class="flex flex-col gap-3">
-					@visual.KV("User ID", u.ID, true)
-					@visual.KV("Email", u.Email, false)
+					@visual.KV("User ID", u.ID)
+					@visual.KV("Email", u.Email)
 				</dl>
 
 				<div class="border-t border-border"></div>
