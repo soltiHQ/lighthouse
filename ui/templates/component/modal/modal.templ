@@ -17,32 +17,36 @@ templ Modal(name string) {
 		{ xOn(name)... }
 		x-cloak
 	>
-		<!-- overlay -->
-		<div x-show="show" class={ overlay }
-			x-on:click="show = false"
-			x-transition:enter="transition ease-out duration-200"
-			x-transition:enter-start="opacity-0"
-			x-transition:enter-end="opacity-100"
-			x-transition:leave="transition ease-in duration-150"
-			x-transition:leave-start="opacity-100"
-			x-transition:leave-end="opacity-0"
-		></div>
-
-		<!-- panel -->
-		<div x-show="show" class={ panel } x-on:click="show = false">
-			<div
-				class={ container }
-				x-on:click.stop
+		<template x-teleport="body">
+			<!-- overlay -->
+			<div x-show="show" class={ overlay }
+				x-on:click="show = false"
 				x-transition:enter="transition ease-out duration-200"
-				x-transition:enter-start="opacity-0 scale-95"
-				x-transition:enter-end="opacity-100 scale-100"
+				x-transition:enter-start="opacity-0"
+				x-transition:enter-end="opacity-100"
 				x-transition:leave="transition ease-in duration-150"
-				x-transition:leave-start="opacity-100 scale-100"
-				x-transition:leave-end="opacity-0 scale-95"
-			>
-				{ children... }
+				x-transition:leave-start="opacity-100"
+				x-transition:leave-end="opacity-0"
+			></div>
+		</template>
+
+		<template x-teleport="body">
+			<!-- panel -->
+			<div x-show="show" class={ panel } x-on:click="show = false">
+				<div
+					class={ container }
+					x-on:click.stop
+					x-transition:enter="transition ease-out duration-200"
+					x-transition:enter-start="opacity-0 scale-95"
+					x-transition:enter-end="opacity-100 scale-100"
+					x-transition:leave="transition ease-in duration-150"
+					x-transition:leave-start="opacity-100 scale-100"
+					x-transition:leave-end="opacity-0 scale-95"
+				>
+					{ children... }
+				</div>
 			</div>
-		</div>
+		</template>
 	</div>
 }
 
