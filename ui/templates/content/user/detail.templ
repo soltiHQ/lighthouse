@@ -20,32 +20,28 @@ templ Detail(apiUser v1.User, p policy.UserDetail) {
 templ Identity(u v1.User, p policy.UserDetail) {
 	@card.Card("") {
 		@card.CardBody() {
-			<div class="space-y-6">
-				<div class="space-y-2">
+			<div class="flex flex-col gap-8">
+				<div class="flex items-center gap-2">
 					if !u.Disabled {
-						@visual.Badge("Active", visual.VariantSuccess)
+						@visual.StatusDot("success")
+						<span class="text-sm font-medium text-success">Active</span>
 					} else {
-						@visual.Badge("Disabled", visual.VariantDanger)
+						@visual.StatusDot("muted")
+						<span class="text-sm font-medium text-muted">Inactive</span>
 					}
 				</div>
 
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
-					<div class="space-y-3 min-w-0">
-						<dl class="space-y-3">
-							@visual.KV("User ID", u.ID, true)
-							@visual.KV("Subject", u.Subject, false)
-							@visual.KV("Name", u.Name, false)
-							@visual.KV("Email", u.Email, false)
-						</dl>
-					</div>
+				<dl class="flex flex-col gap-3">
+					@visual.KV("User ID", u.ID, true)
+					@visual.KV("Subject", u.Subject, false)
+					@visual.KV("Name", u.Name, false)
+					@visual.KV("Email", u.Email, false)
+				</dl>
 
-					<div class="space-y-3 min-w-0">
-						<dl class="space-y-3">
-							@visual.BadgeList("Roles", u.RoleIDs, visual.VariantSecondary, true)
-							@visual.BadgeList("Permissions", u.Permissions, visual.VariantPrimary, true)
-						</dl>
-					</div>
-				</div>
+				<dl class="flex flex-col gap-3">
+					@visual.BadgeList("Roles", u.RoleIDs, visual.VariantSecondary, true)
+					@visual.BadgeList("Permissions", u.Permissions, visual.VariantPrimary, true)
+				</dl>
 			</div>
 		}
 
