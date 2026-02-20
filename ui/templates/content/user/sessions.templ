@@ -6,8 +6,10 @@ import (
 
 	v1 "github.com/soltiHQ/control-plane/api/v1"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
+	"github.com/soltiHQ/control-plane/ui/templates/asset"
 	"github.com/soltiHQ/control-plane/ui/templates/component/button"
 	"github.com/soltiHQ/control-plane/ui/templates/component/card"
+	"github.com/soltiHQ/control-plane/ui/templates/component/status"
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
@@ -27,9 +29,7 @@ templ Sessions(items []v1.Session) {
 
 		@card.CardBody() {
 			if len(items) == 0 {
-				<div class="py-8 text-center">
-					<p class="text-sm text-muted">No active sessions</p>
-				</div>
+				@status.Empty("No active sessions")
 			} else {
 				<div class="divide-y divide-border -mx-5">
 					for _, s := range items {
@@ -64,7 +64,9 @@ templ sessionRow(s v1.Session) {
 			if !s.Revoked && !expired {
 				<div class="shrink-0">
 					<form hx-post={ routepath.ApiUserRevokeSession(s.ID) } hx-swap="none">
-						@button.Button("Revoke", "submit", false, button.VariantDanger, false)
+						@button.Button("", "submit", false, button.VariantDanger, false) {
+							@asset.Icon("revoke")
+						}
 					</form>
 				</div>
 			} else {

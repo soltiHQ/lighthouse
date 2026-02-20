@@ -9,6 +9,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/ui/templates/component/card"
 	"github.com/soltiHQ/control-plane/ui/templates/component/form"
+	"github.com/soltiHQ/control-plane/ui/templates/component/status"
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
@@ -57,7 +58,7 @@ templ TaskResults(agentID string, items []v1.Task, total int, slot string, offse
 // TaskRows renders table rows for a slice of tasks.
 templ TaskRows(items []v1.Task) {
 	if len(items) == 0 {
-		<div class="px-5 py-8 text-center text-sm text-muted">No tasks found.</div>
+		@status.Empty("No tasks found")
 	} else {
 		for _, t := range items {
 			@taskRow(t)
