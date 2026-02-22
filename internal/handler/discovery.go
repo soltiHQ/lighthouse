@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	v1 "github.com/soltiHQ/control-plane/api/v1"
+	discoveryv1 "github.com/soltiHQ/control-plane/api/discovery/v1"
 	genv1 "github.com/soltiHQ/control-plane/domain/gen/v1"
 	"github.com/soltiHQ/control-plane/domain/model"
 	"github.com/soltiHQ/control-plane/internal/service/agent"
@@ -39,13 +39,13 @@ func (h *HTTPDiscovery) Sync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var in v1.Agent
+	var in discoveryv1.SyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	a, err := model.NewAgentFromV1(&in)
+	a, err := model.NewAgentFromSync(&in)
 	if err != nil {
 		h.logger.Warn().Err(err).Str("agent_id", in.ID).Msg("invalid sync request")
 		http.Error(w, "invalid agent data", http.StatusBadRequest)
@@ -60,7 +60,7 @@ func (h *HTTPDiscovery) Sync(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(v1.AgentSyncResponse{Success: true})
+	_ = json.NewEncoder(w).Encode(discoveryv1.SyncResponse{Success: true})
 }
 
 // GRPCDiscovery implements genv1.DiscoverServiceServer.

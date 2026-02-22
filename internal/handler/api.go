@@ -14,7 +14,8 @@ import (
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/internal/ui/trigger"
 
-	v1 "github.com/soltiHQ/control-plane/api/v1"
+	proxyv1 "github.com/soltiHQ/control-plane/api/proxy/v1"
+	restv1 "github.com/soltiHQ/control-plane/api/rest/v1"
 	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/domain/model"
 	"github.com/soltiHQ/control-plane/internal/proxy"
@@ -428,7 +429,7 @@ func (a *API) permissionsList(w http.ResponseWriter, r *http.Request, mode httpc
 		items = append(items, apimap.Permission(p))
 	}
 	response.OK(w, r, mode, &responder.View{
-		Data: v1.PermissionListResponse{Items: items},
+		Data: restv1.PermissionListResponse{Items: items},
 	})
 }
 
@@ -439,7 +440,7 @@ func (a *API) rolesList(w http.ResponseWriter, r *http.Request, mode httpctx.Ren
 		return
 	}
 
-	items := make([]v1.Role, 0, len(roles))
+	items := make([]restv1.Role, 0, len(roles))
 	for _, role := range roles {
 		if role == nil {
 			continue
@@ -447,7 +448,7 @@ func (a *API) rolesList(w http.ResponseWriter, r *http.Request, mode httpctx.Ren
 		items = append(items, apimap.Role(role))
 	}
 	response.OK(w, r, mode, &responder.View{
-		Data: v1.RoleListResponse{Items: items},
+		Data: restv1.RoleListResponse{Items: items},
 	})
 }
 
@@ -478,7 +479,7 @@ func (a *API) agentList(w http.ResponseWriter, r *http.Request, mode httpctx.Ren
 		return
 	}
 
-	items := make([]v1.Agent, 0, len(res.Items))
+	items := make([]restv1.Agent, 0, len(res.Items))
 	for _, ag := range res.Items {
 		if ag == nil {
 			continue
@@ -486,7 +487,7 @@ func (a *API) agentList(w http.ResponseWriter, r *http.Request, mode httpctx.Ren
 		items = append(items, apimap.Agent(ag))
 	}
 	response.OK(w, r, mode, &responder.View{
-		Data: v1.AgentListResponse{
+		Data: restv1.AgentListResponse{
 			Items:      items,
 			NextCursor: res.NextCursor,
 		},
@@ -570,7 +571,15 @@ func (a *API) agentTasksList(w http.ResponseWriter, r *http.Request, mode httpct
 		}
 	}
 
-	p := proxy.New(ag.Endpoint())
+	p, err := proxy.New(ag.Endpoint(), ag.EndpointType())
+	if err != nil {
+		a.logger.Error().Err(err).
+			Str("agent_id", agentID).
+			Str("endpoint", ag.Endpoint()).
+			Msg("proxy: unsupported endpoint type")
+		response.Unavailable(w, r, mode)
+		return
+	}
 
 	result, err := p.ListTasks(r.Context(), filter)
 	if err != nil {
@@ -585,7 +594,7 @@ func (a *API) agentTasksList(w http.ResponseWriter, r *http.Request, mode httpct
 	items := apimap.TasksFromProxy(result.Tasks)
 
 	response.OK(w, r, mode, &responder.View{
-		Data: v1.TaskListResponse{
+		Data: proxyv1.TaskListResponse{
 			Tasks: items,
 			Total: result.Total,
 		},
@@ -620,7 +629,7 @@ func (a *API) userList(w http.ResponseWriter, r *http.Request, mode httpctx.Rend
 		return
 	}
 
-	items := make([]v1.User, 0, len(res.Items))
+	items := make([]restv1.User, 0, len(res.Items))
 	for _, u := range res.Items {
 		if u == nil {
 			continue
@@ -628,7 +637,7 @@ func (a *API) userList(w http.ResponseWriter, r *http.Request, mode httpctx.Rend
 		items = append(items, apimap.User(u))
 	}
 	response.OK(w, r, mode, &responder.View{
-		Data: v1.UserListResponse{
+		Data: restv1.UserListResponse{
 			Items:      items,
 			NextCursor: res.NextCursor,
 		},
@@ -662,7 +671,7 @@ func (a *API) usersSessions(w http.ResponseWriter, r *http.Request, mode httpctx
 		return
 	}
 
-	items := make([]v1.Session, 0, len(res.Items))
+	items := make([]restv1.Session, 0, len(res.Items))
 	for _, s := range res.Items {
 		if s == nil {
 			continue
@@ -670,14 +679,14 @@ func (a *API) usersSessions(w http.ResponseWriter, r *http.Request, mode httpctx
 		items = append(items, apimap.Session(s))
 	}
 	response.OK(w, r, mode, &responder.View{
-		Data:      v1.SessionResponse{Items: items},
+		Data:      restv1.SessionResponse{Items: items},
 		Component: contentUser.Sessions(items),
 	})
 }
 
 func (a *API) userUpsert(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, id string, action UserUpsertMode) {
 	var (
-		in v1.User
+		in restv1.User
 		u  *model.User
 	)
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
@@ -782,7 +791,7 @@ func (a *API) userSetStatus(w http.ResponseWriter, r *http.Request, mode httpctx
 }
 
 func (a *API) userSetPassword(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, userID string) {
-	var in v1.SetPasswordRequest
+	var in restv1.SetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		response.BadRequest(w, r, mode)
 		return

@@ -2,12 +2,14 @@
 //
 // The control-plane calls INTO agents to query tasks, submit work, etc.
 // Each agent exposes either an HTTP or a gRPC endpoint; the proxy package
-// auto-selects the transport based on the endpoint scheme.
+// selects the transport based on the endpoint type reported by the agent.
 package proxy
 
 import (
 	"context"
 	"strings"
+
+	"github.com/soltiHQ/control-plane/domain/kind"
 )
 
 // Task is the proxy-internal representation of an agent task.
@@ -40,13 +42,14 @@ type AgentProxy interface {
 	ListTasks(ctx context.Context, filter TaskFilter) (*TaskListResult, error)
 }
 
-// New creates an HTTP or gRPC proxy depending on the endpoint scheme.
-//
-// If the endpoint starts with "http://" or "https://", an HTTP proxy is used.
-// Otherwise, the endpoint is treated as a gRPC address (host:port).
-func New(endpoint string) AgentProxy {
-	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
-		return &httpProxy{endpoint: strings.TrimRight(endpoint, "/")}
+// New creates an HTTP or gRPC proxy based on the agent's endpoint type.
+func New(endpoint string, epType kind.EndpointType) (AgentProxy, error) {
+	switch epType {
+	case kind.EndpointHTTP:
+		return &httpProxy{endpoint: strings.TrimRight(endpoint, "/")}, nil
+	case kind.EndpointGRPC:
+		return &grpcProxy{endpoint: endpoint}, nil
+	default:
+		return nil, ErrUnsupportedEndpointType
 	}
-	return &grpcProxy{endpoint: endpoint}
 }
