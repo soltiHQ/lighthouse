@@ -14,7 +14,6 @@ import (
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
 	"github.com/soltiHQ/control-plane/internal/ui/trigger"
 
-	proxyv1 "github.com/soltiHQ/control-plane/api/proxy/v1"
 	restv1 "github.com/soltiHQ/control-plane/api/rest/v1"
 	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/domain/model"
@@ -60,6 +59,7 @@ type API struct {
 	sessionSVC    *session.Service
 	credentialSVC *credential.Service
 	agentSVC      *agent.Service
+	proxyPool     *proxy.Pool
 }
 
 // NewAPI creates a new API handler.
@@ -70,6 +70,7 @@ func NewAPI(
 	sessionSVC *session.Service,
 	credentialSVC *credential.Service,
 	agentSVC *agent.Service,
+	proxyPool *proxy.Pool,
 ) *API {
 	if accessSVC == nil {
 		panic("handler.API: accessSVC is nil")
@@ -86,6 +87,9 @@ func NewAPI(
 	if agentSVC == nil {
 		panic("handler.API: agentSVC is nil")
 	}
+	if proxyPool == nil {
+		panic("handler.API: proxyPool is nil")
+	}
 	return &API{
 		logger:        logger.With().Str("handler", "api").Logger(),
 		accessSVC:     accessSVC,
@@ -93,6 +97,7 @@ func NewAPI(
 		sessionSVC:    sessionSVC,
 		credentialSVC: credentialSVC,
 		agentSVC:      agentSVC,
+		proxyPool:     proxyPool,
 	}
 }
 
@@ -537,7 +542,7 @@ func (a *API) agentPatchLabels(w http.ResponseWriter, r *http.Request, mode http
 	}
 
 	w.Header().Set(trigger.Header, trigger.AgentUpdate)
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w, r)
 }
 
 func (a *API) agentTasksList(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, agentID string) {
@@ -571,13 +576,19 @@ func (a *API) agentTasksList(w http.ResponseWriter, r *http.Request, mode httpct
 		}
 	}
 
-	p, err := proxy.New(ag.Endpoint(), ag.EndpointType())
+	p, err := a.proxyPool.Get(ag.Endpoint(), ag.EndpointType(), ag.APIVersion())
 	if err != nil {
 		a.logger.Error().Err(err).
 			Str("agent_id", agentID).
 			Str("endpoint", ag.Endpoint()).
-			Msg("proxy: unsupported endpoint type")
-		response.Unavailable(w, r, mode)
+			Msg("proxy: pool get failed")
+		switch {
+		case errors.Is(err, proxy.ErrUnsupportedAPIVersion),
+			errors.Is(err, proxy.ErrUnsupportedEndpointType):
+			response.BadRequest(w, r, mode)
+		default:
+			response.Unavailable(w, r, mode)
+		}
 		return
 	}
 
@@ -591,14 +602,9 @@ func (a *API) agentTasksList(w http.ResponseWriter, r *http.Request, mode httpct
 		return
 	}
 
-	items := apimap.TasksFromProxy(result.Tasks)
-
 	response.OK(w, r, mode, &responder.View{
-		Data: proxyv1.TaskListResponse{
-			Tasks: items,
-			Total: result.Total,
-		},
-		Component: contentAgent.Tasks(agentID, items, result.Total, filter.Slot, filter.Offset),
+		Data:      result,
+		Component: contentAgent.Tasks(agentID, result.Tasks, result.Total, filter.Slot, filter.Offset),
 	})
 }
 
@@ -750,9 +756,11 @@ func (a *API) userUpsert(w http.ResponseWriter, r *http.Request, mode httpctx.Re
 
 	if action == UserCreate {
 		trigger.Redirect(w, routepath.PageUsers)
+		response.NoContent(w, r)
+		return
 	}
 	w.Header().Set(trigger.Header, trigger.UserUpdate)
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w, r)
 }
 
 func (a *API) userDelete(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, id string) {
@@ -762,7 +770,7 @@ func (a *API) userDelete(w http.ResponseWriter, r *http.Request, mode httpctx.Re
 		return
 	}
 	trigger.Redirect(w, routepath.PageUsers)
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w, r)
 }
 
 func (a *API) userSetStatus(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, userID string, status UserStatusMode) {
@@ -787,7 +795,7 @@ func (a *API) userSetStatus(w http.ResponseWriter, r *http.Request, mode httpctx
 		return
 	}
 	w.Header().Set(trigger.Header, trigger.UserUpdate)
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w, r)
 }
 
 func (a *API) userSetPassword(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, userID string) {
@@ -816,7 +824,7 @@ func (a *API) userSetPassword(w http.ResponseWriter, r *http.Request, mode httpc
 	}
 
 	w.Header().Set(trigger.Header, trigger.UserUpdate)
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w, r)
 }
 
 func (a *API) userRevokeSession(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, id string) {
@@ -830,5 +838,5 @@ func (a *API) userRevokeSession(w http.ResponseWriter, r *http.Request, mode htt
 	}
 
 	w.Header().Set(trigger.Header, trigger.UserSessionUpdate)
-	w.WriteHeader(http.StatusNoContent)
+	response.NoContent(w, r)
 }

@@ -9,6 +9,7 @@ type Agent struct {
 	Name         string `json:"name"`
 	Endpoint     string `json:"endpoint"`
 	EndpointType string `json:"endpoint_type"`
+	APIVersion   string `json:"api_version"`
 	OS           string `json:"os"`
 	Arch         string `json:"arch"`
 	Platform     string `json:"platform"`

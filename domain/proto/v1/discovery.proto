@@ -15,6 +15,12 @@ enum EndpointType {
   ENDPOINT_TYPE_HTTP = 1;
 }
 
+// APIVersion describes the agent API version.
+enum APIVersion {
+  API_VERSION_UNSPECIFIED = 0;
+  API_VERSION_V1 = 1;
+}
+
 message SyncRequest {
   // Unique agent identifier.
   string id = 1;
@@ -36,6 +42,8 @@ message SyncRequest {
   map<string, string> metadata = 9;
   // Transport type for the agent endpoint.
   EndpointType endpoint_type = 10;
+  // API version the agent supports.
+  APIVersion api_version = 11;
 }
 
 message SyncResponse {

@@ -23,5 +23,6 @@ func Agent(a *model.Agent) restv1.Agent {
 		
 		Endpoint:     a.Endpoint(),
 		EndpointType: string(a.EndpointType()),
+		APIVersion:   a.APIVersion().String(),
 	}
 }

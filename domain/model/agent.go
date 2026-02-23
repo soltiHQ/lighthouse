@@ -29,6 +29,7 @@ type Agent struct {
 	name         string
 	endpoint     string
 	endpointType kind.EndpointType
+	apiVersion   kind.APIVersion
 	os           string
 	arch         string
 	platform     string
@@ -73,6 +74,11 @@ func NewAgentFromSync(in *discoveryv1.SyncRequest) (*Agent, error) {
 	for k, v := range in.Metadata {
 		md[k] = v
 	}
+	epType, err := kind.EndpointTypeFromInt(in.EndpointType)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Agent{
 		createdAt: now,
 		updatedAt: now,
@@ -83,7 +89,8 @@ func NewAgentFromSync(in *discoveryv1.SyncRequest) (*Agent, error) {
 		id:           in.ID,
 		name:         in.Name,
 		endpoint:     in.Endpoint,
-		endpointType: kind.EndpointTypeFromInt(in.EndpointType),
+		endpointType: epType,
+		apiVersion:   kind.APIVersionFromInt(in.APIVersion),
 		os:           in.OS,
 		arch:         in.Arch,
 		platform:     in.Platform,
@@ -110,6 +117,11 @@ func NewAgentFromProto(req *genv1.SyncRequest) (*Agent, error) {
 	for k, v := range req.Metadata {
 		md[k] = v
 	}
+	epType, err := kind.EndpointTypeFromInt(int(req.EndpointType))
+	if err != nil {
+		return nil, err
+	}
+
 	return &Agent{
 		createdAt: now,
 		updatedAt: now,
@@ -120,7 +132,8 @@ func NewAgentFromProto(req *genv1.SyncRequest) (*Agent, error) {
 		id:           req.Id,
 		name:         req.Name,
 		endpoint:     req.Endpoint,
-		endpointType: kind.EndpointTypeFromInt(int(req.EndpointType)),
+		endpointType: epType,
+		apiVersion:   kind.APIVersionFromInt(int(req.ApiVersion)),
 		os:           req.Os,
 		arch:         req.Arch,
 		platform:     req.Platform,
@@ -140,6 +153,9 @@ func (a *Agent) Endpoint() string { return a.endpoint }
 
 // EndpointType returns the agent's transport protocol.
 func (a *Agent) EndpointType() kind.EndpointType { return a.endpointType }
+
+// APIVersion returns the agent's API version.
+func (a *Agent) APIVersion() kind.APIVersion { return a.apiVersion }
 
 // UptimeSeconds returns the agent-reported uptime in seconds.
 func (a *Agent) UptimeSeconds() int64 { return a.uptimeSeconds }
@@ -228,6 +244,7 @@ func (a *Agent) Clone() *Agent {
 		name:         a.name,
 		endpoint:     a.endpoint,
 		endpointType: a.endpointType,
+		apiVersion:   a.apiVersion,
 		os:           a.os,
 		arch:         a.arch,
 		platform:     a.platform,
