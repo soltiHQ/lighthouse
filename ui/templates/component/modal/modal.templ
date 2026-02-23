@@ -32,7 +32,9 @@ templ Modal(name string) {
 
 		<template x-teleport="body">
 			<!-- panel -->
-			<div x-show="show" class={ panel } x-on:click="show = false">
+			<div x-show="show" class={ panel } x-on:click="show = false"
+				x-init="htmx.process($el)"
+			>
 				<div
 					class={ container }
 					x-on:click.stop
