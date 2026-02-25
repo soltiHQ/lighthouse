@@ -84,11 +84,13 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	}
 
 	if err := s.store.DeleteSessionsByUser(ctx, id); err != nil {
+		s.logger.Warn().Err(err).Str("user_id", id).Msg("delete: failed to remove sessions")
 		return err
 	}
 
 	creds, err := s.store.ListCredentialsByUser(ctx, id)
 	if err != nil {
+		s.logger.Warn().Err(err).Str("user_id", id).Msg("delete: failed to list credentials")
 		return err
 	}
 	for _, c := range creds {
@@ -97,13 +99,16 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 		}
 
 		if err = s.store.DeleteVerifierByCredential(ctx, c.ID()); err != nil {
+			s.logger.Warn().Err(err).Str("user_id", id).Str("credential_id", c.ID()).Msg("delete: failed to remove verifier")
 			return err
 		}
 		if err = s.store.DeleteCredential(ctx, c.ID()); err != nil && !errors.Is(err, storage.ErrNotFound) {
+			s.logger.Warn().Err(err).Str("user_id", id).Str("credential_id", c.ID()).Msg("delete: failed to remove credential")
 			return err
 		}
 	}
 	if err = s.store.DeleteUser(ctx, id); err != nil && !errors.Is(err, storage.ErrNotFound) {
+		s.logger.Warn().Err(err).Str("user_id", id).Msg("delete: failed to remove user record")
 		return err
 	}
 	return nil

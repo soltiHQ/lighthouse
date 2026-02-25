@@ -3,6 +3,7 @@ package access
 import (
 	"context"
 
+	"github.com/rs/zerolog"
 	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/domain/model"
 	iauth "github.com/soltiHQ/control-plane/internal/auth"
@@ -13,19 +14,24 @@ import (
 
 // Service implements shared authentication use-cases.
 type Service struct {
-	auth  *wire.Auth
-	store storage.Storage
+	logger zerolog.Logger
+	auth   *wire.Auth
+	store  storage.Storage
 }
 
 // New creates a new authentication service.
-func New(authSvc *wire.Auth, store storage.Storage) *Service {
+func New(authSvc *wire.Auth, store storage.Storage, logger zerolog.Logger) *Service {
 	if authSvc == nil {
 		panic("access.Service: nil auth service")
 	}
 	if store == nil {
 		panic("access.Service: nil storage")
 	}
-	return &Service{auth: authSvc, store: store}
+	return &Service{
+		logger: logger.With().Str("service", "access").Logger(),
+		auth:   authSvc,
+		store:  store,
+	}
 }
 
 // Login authenticates a user and returns issued tokens and identity.
@@ -51,6 +57,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*identity.Identi
 	if s.auth.Limiter != nil && req.RateKey != "" {
 		s.auth.Limiter.Reset(req.RateKey)
 	}
+	s.logger.Info().Str("subject", req.Subject).Str("user_id", id.UserID).Msg("login success")
 	return id, LoginResult{
 		AccessToken:  pair.AccessToken,
 		RefreshToken: pair.RefreshToken,

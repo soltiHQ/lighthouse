@@ -441,6 +441,7 @@ func (a *API) permissionsList(w http.ResponseWriter, r *http.Request, mode httpc
 func (a *API) rolesList(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
 	roles, err := a.accessSVC.GetRoles(r.Context())
 	if err != nil {
+		a.logger.Error().Err(err).Msg("roles list failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
@@ -480,6 +481,7 @@ func (a *API) agentList(w http.ResponseWriter, r *http.Request, mode httpctx.Ren
 		Filter: filter,
 	})
 	if err != nil {
+		a.logger.Error().Err(err).Msg("agent list failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
@@ -507,6 +509,7 @@ func (a *API) agentDetails(w http.ResponseWriter, r *http.Request, mode httpctx.
 			response.NotFound(w, r, mode)
 			return
 		}
+		a.logger.Error().Err(err).Str("agent_id", id).Msg("agent get failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
@@ -534,13 +537,16 @@ func (a *API) agentPatchLabels(w http.ResponseWriter, r *http.Request, mode http
 	})
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
+			a.logger.Warn().Str("agent_id", id).Msg("agent not found")
 			response.NotFound(w, r, mode)
 			return
 		}
+		a.logger.Error().Err(err).Str("agent_id", id).Msg("agent patch labels failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
 
+	a.logger.Info().Str("agent_id", id).Msg("agent labels updated")
 	w.Header().Set(trigger.Header, trigger.AgentUpdate)
 	response.NoContent(w, r)
 }
@@ -631,6 +637,7 @@ func (a *API) userList(w http.ResponseWriter, r *http.Request, mode httpctx.Rend
 		Filter: filter,
 	})
 	if err != nil {
+		a.logger.Error().Err(err).Msg("user list failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
@@ -658,6 +665,7 @@ func (a *API) usersDetails(w http.ResponseWriter, r *http.Request, mode httpctx.
 			response.NotFound(w, r, mode)
 			return
 		}
+		a.logger.Error().Err(err).Str("user_id", id).Msg("user get failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
@@ -673,6 +681,7 @@ func (a *API) usersDetails(w http.ResponseWriter, r *http.Request, mode httpctx.
 func (a *API) usersSessions(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, id string) {
 	res, err := a.sessionSVC.ListByUser(r.Context(), session.ListByUserQuery{UserID: id})
 	if err != nil {
+		a.logger.Error().Err(err).Str("user_id", id).Msg("user sessions list failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
@@ -724,6 +733,7 @@ func (a *API) userUpsert(w http.ResponseWriter, r *http.Request, mode httpctx.Re
 				response.NotFound(w, r, mode)
 				return
 			}
+			a.logger.Error().Err(err).Str("user_id", id).Msg("user get failed")
 			response.Unavailable(w, r, mode)
 			return
 		}
@@ -750,15 +760,18 @@ func (a *API) userUpsert(w http.ResponseWriter, r *http.Request, mode httpctx.Re
 	}
 
 	if err := a.userSVC.Upsert(r.Context(), u); err != nil {
+		a.logger.Error().Err(err).Str("user_id", u.ID()).Msg("user upsert failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
 
 	if action == UserCreate {
+		a.logger.Info().Str("user_id", u.ID()).Str("subject", u.Subject()).Msg("user created")
 		trigger.Redirect(w, routepath.PageUsers)
 		response.NoContent(w, r)
 		return
 	}
+	a.logger.Info().Str("user_id", id).Msg("user updated")
 	w.Header().Set(trigger.Header, trigger.UserUpdate)
 	response.NoContent(w, r)
 }
@@ -766,9 +779,11 @@ func (a *API) userUpsert(w http.ResponseWriter, r *http.Request, mode httpctx.Re
 func (a *API) userDelete(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, id string) {
 	err := a.userSVC.Delete(r.Context(), id)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+		a.logger.Error().Err(err).Str("user_id", id).Msg("user delete failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
+	a.logger.Info().Str("user_id", id).Msg("user deleted")
 	trigger.Redirect(w, routepath.PageUsers)
 	response.NoContent(w, r)
 }
@@ -780,6 +795,7 @@ func (a *API) userSetStatus(w http.ResponseWriter, r *http.Request, mode httpctx
 			response.NotFound(w, r, mode)
 			return
 		}
+		a.logger.Error().Err(err).Str("user_id", userID).Msg("user get failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
@@ -791,9 +807,11 @@ func (a *API) userSetStatus(w http.ResponseWriter, r *http.Request, mode httpctx
 	}
 
 	if err = a.userSVC.Upsert(r.Context(), u); err != nil {
+		a.logger.Error().Err(err).Str("user_id", userID).Msg("user status update failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
+	a.logger.Info().Str("user_id", userID).Msg("user status changed")
 	w.Header().Set(trigger.Header, trigger.UserUpdate)
 	response.NoContent(w, r)
 }
@@ -816,13 +834,16 @@ func (a *API) userSetPassword(w http.ResponseWriter, r *http.Request, mode httpc
 	})
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
+			a.logger.Warn().Str("user_id", userID).Msg("user not found for password change")
 			response.NotFound(w, r, mode)
 			return
 		}
+		a.logger.Error().Err(err).Str("user_id", userID).Msg("user password change failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
 
+	a.logger.Info().Str("user_id", userID).Msg("user password changed")
 	w.Header().Set(trigger.Header, trigger.UserUpdate)
 	response.NoContent(w, r)
 }
@@ -833,10 +854,12 @@ func (a *API) userRevokeSession(w http.ResponseWriter, r *http.Request, mode htt
 		session.RevokeRequest{ID: id, At: time.Now()},
 	)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+		a.logger.Error().Err(err).Str("session_id", id).Msg("session revoke failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
 
+	a.logger.Info().Str("session_id", id).Msg("session revoked")
 	w.Header().Set(trigger.Header, trigger.UserSessionUpdate)
 	response.NoContent(w, r)
 }

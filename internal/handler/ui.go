@@ -104,18 +104,22 @@ func (u *UI) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, auth.ErrRateLimited):
+			u.logger.Warn().Str("subject", subject).Msg("login rate limited")
 			response.AuthRateLimit(w, r, mode)
 			return
 		case errors.Is(err, auth.ErrInvalidCredentials),
 			errors.Is(err, auth.ErrInvalidRequest):
+			u.logger.Warn().Str("subject", subject).Msg("login failed")
 			http.Redirect(w, r, routepath.PageLogin+"?error=Invalid+username+or+password", http.StatusFound)
 			return
 		default:
+			u.logger.Error().Err(err).Str("subject", subject).Msg("login error")
 			http.Redirect(w, r, routepath.PageLogin+"?error=Something+went+wrong", http.StatusFound)
 			return
 		}
 	}
 
+	u.logger.Info().Str("subject", subject).Msg("login success")
 	cookie.SetAuth(w, r, res.AccessToken, res.RefreshToken, res.SessionID)
 	http.Redirect(w, r, redirect, http.StatusFound)
 }
@@ -136,6 +140,7 @@ func (u *UI) Logout(w http.ResponseWriter, r *http.Request) {
 		_ = u.accessSVC.Logout(r.Context(), access.LogoutRequest{SessionID: c.Value})
 	}
 
+	u.logger.Info().Msg("logout")
 	cookie.DeleteAuth(w, r)
 	http.Redirect(w, r, routepath.PageLogin, http.StatusFound)
 }

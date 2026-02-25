@@ -4,25 +4,20 @@ import (
 	"context"
 	"errors"
 
-	"github.com/rs/zerolog"
 	"github.com/soltiHQ/control-plane/domain/model"
 	"github.com/soltiHQ/control-plane/internal/service"
 	"github.com/soltiHQ/control-plane/internal/storage"
 )
 
 type Service struct {
-	logger zerolog.Logger
-	store  storage.AgentStore
+	store storage.AgentStore
 }
 
-func New(store storage.AgentStore, logger zerolog.Logger) *Service {
+func New(store storage.AgentStore) *Service {
 	if store == nil {
 		panic("agent.Service: store is nil")
 	}
-	return &Service{
-		logger: logger.With().Str("service", "agents").Logger(),
-		store:  store,
-	}
+	return &Service{store: store}
 }
 
 // List returns a page of agents matching the query.

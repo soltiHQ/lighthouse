@@ -50,14 +50,6 @@ func (h *HTTPDiscovery) Sync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logger.Debug().
-		Str("agent_id", in.ID).
-		Str("name", in.Name).
-		Str("endpoint", in.Endpoint).
-		Int("endpoint_type", in.EndpointType).
-		Int("api_version", in.APIVersion).
-		Msg("sync request received")
-
 	a, err := model.NewAgentFromSync(&in)
 	if err != nil {
 		h.logger.Warn().Err(err).

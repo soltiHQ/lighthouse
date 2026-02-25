@@ -27,6 +27,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/service/session"
 	"github.com/soltiHQ/control-plane/internal/service/user"
 	"github.com/soltiHQ/control-plane/internal/storage/inmemory"
+	interceptor "github.com/soltiHQ/control-plane/internal/transport/grpc/interceptors"
 	"github.com/soltiHQ/control-plane/internal/transport/http/middleware"
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
 	"github.com/soltiHQ/control-plane/internal/transport/http/route"
@@ -57,11 +58,11 @@ func main() {
 	)
 
 	var (
-		authSVC       = access.New(authModel, store)
+		authSVC       = access.New(authModel, store, logger)
 		userSVC       = user.New(store, logger)
-		sessionSVC    = session.New(store, logger)
+		sessionSVC    = session.New(store)
 		credentialSVC = credential.New(store, logger)
-		agentSVC      = agent.New(store, logger)
+		agentSVC      = agent.New(store)
 	)
 
 	proxyPool := proxy.NewPool()
@@ -87,9 +88,15 @@ func main() {
 		authMW,
 		permMW,
 	)
+	var (
+		ridMW = middleware.RequestID()
+		logMW = middleware.Logger(logger)
+	)
 	apiHandler.Routes(mux,
 		authMW,
 		permMW,
+		ridMW,
+		logMW,
 	)
 
 	var mainHandler http.Handler = mux
@@ -130,7 +137,11 @@ func main() {
 	// ---------------------------------------------------------------
 	grpcDiscovery := handler.NewGRPCDiscovery(logger, agentSVC)
 
-	grpcSrv := grpc.NewServer()
+	grpcSrv := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			interceptor.UnaryRecovery(logger),
+		),
+	)
 	genv1.RegisterDiscoverServiceServer(grpcSrv, grpcDiscovery)
 
 	grpcRunner, err := grpcserver.New(
