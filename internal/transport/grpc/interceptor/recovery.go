@@ -24,7 +24,6 @@ func UnaryRecovery(logger zerolog.Logger) grpc.UnaryServerInterceptor {
 			}
 
 			stack := debug.Stack()
-
 			evt := logger.Error().
 				Str("method", info.FullMethod).
 				Str("panic", fmt.Sprintf("%v", rec)).
@@ -33,9 +32,9 @@ func UnaryRecovery(logger zerolog.Logger) grpc.UnaryServerInterceptor {
 			if rid, ok := transportctx.RequestID(ctx); ok {
 				evt = evt.Str("request_id", rid)
 			}
-			evt.Msg("panic recovered")
 
 			resp = nil
+			evt.Msg("panic recovered")
 			err = status.Errorf(ctx, codes.Internal, "internal error")
 		}()
 

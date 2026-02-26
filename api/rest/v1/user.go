@@ -1,5 +1,6 @@
 package restv1
 
+// User is the REST representation of a platform user.
 type User struct {
 	Permissions []string `json:"permissions,omitempty"`
 	RoleIDs     []string `json:"role_ids,omitempty"`
@@ -12,6 +13,7 @@ type User struct {
 	Disabled bool `json:"disabled"`
 }
 
+// UserListResponse is the paginated list of users.
 type UserListResponse struct {
 	Items      []User `json:"items"`
 	NextCursor string `json:"next_cursor,omitempty"`

@@ -14,14 +14,14 @@ import (
 // UnaryLogger returns a unary server interceptor that logs every completed call.
 func UnaryLogger(logger zerolog.Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		start := time.Now()
+		var (
+			resp, err = handler(ctx, req)
+			st, _     = grpcstatus.FromError(err)
 
-		resp, err := handler(ctx, req)
-
-		st, _ := grpcstatus.FromError(err)
-		code := st.Code()
-
-		evt := logger.Info()
+			code  = st.Code()
+			start = time.Now()
+			evt   = logger.Info()
+		)
 		if err != nil {
 			evt = logger.Error().Err(err)
 		}
@@ -36,7 +36,6 @@ func UnaryLogger(logger zerolog.Logger) grpc.UnaryServerInterceptor {
 		}
 
 		evt.Msg("grpc request")
-
 		return resp, err
 	}
 }

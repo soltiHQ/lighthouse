@@ -1,3 +1,7 @@
+// Package route provides helpers for registering HTTP routes with middleware chains.
+//
+// BaseMW and PermMW are the two middleware signatures used across the project.
+// Chain, Handle, and HandleFunc let handlers compose middleware without nesting.
 package route
 
 import (
@@ -6,11 +10,15 @@ import (
 	"github.com/soltiHQ/control-plane/domain/kind"
 )
 
+// BaseMW is a standard HTTP middleware signature.
 type BaseMW func(http.Handler) http.Handler
 
+// PermMW creates a middleware that guards a route with the given permission.
 type PermMW func(kind.Permission) BaseMW
 
-// Chain applies middleware in order: Chain(h, a, b) => a(b(h))
+// Chain wraps a handler with middleware applied left-to-right:
+//
+//	Chain(h, a, b) => a(b(h))
 func Chain(h http.Handler, mws ...BaseMW) http.Handler {
 	for i := len(mws) - 1; i >= 0; i-- {
 		if mws[i] == nil {

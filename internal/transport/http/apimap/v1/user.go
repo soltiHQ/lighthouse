@@ -1,10 +1,11 @@
-package apimap
+package apimapv1
 
 import (
 	restv1 "github.com/soltiHQ/control-plane/api/rest/v1"
 	"github.com/soltiHQ/control-plane/domain/model"
 )
 
+// User maps a domain User to its REST DTO.
 func User(u *model.User) restv1.User {
 	if u == nil {
 		return restv1.User{}

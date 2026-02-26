@@ -1,10 +1,11 @@
-package apimap
+package apimapv1
 
 import (
 	restv1 "github.com/soltiHQ/control-plane/api/rest/v1"
 	"github.com/soltiHQ/control-plane/domain/model"
 )
 
+// Session maps a domain Session to its REST DTO.
 func Session(s *model.Session) restv1.Session {
 	if s == nil {
 		return restv1.Session{}

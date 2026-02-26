@@ -1,0 +1,164 @@
+package taskspec
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	restv1 "github.com/soltiHQ/control-plane/api/rest/v1"
+	"github.com/soltiHQ/control-plane/internal/ui/policy"
+	"github.com/soltiHQ/control-plane/internal/ui/routepath"
+	"github.com/soltiHQ/control-plane/ui/templates/asset"
+	"github.com/soltiHQ/control-plane/ui/templates/component/button"
+	"github.com/soltiHQ/control-plane/ui/templates/component/card"
+	"github.com/soltiHQ/control-plane/ui/templates/component/status"
+	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
+)
+
+// Detail renders the task spec identity card with action buttons.
+templ Detail(ts restv1.RolloutSpec, p policy.SpecDetail) {
+	@card.Card("") {
+		@card.CardBody() {
+			<div class="space-y-6">
+				<div class="space-y-3 min-w-0">
+					<dl class="space-y-3">
+						@visual.KV("ID", ts.ID)
+						@visual.KV("Name", ts.Name)
+						@visual.KV("Slot", ts.Slot)
+						@visual.KV("Kind", ts.KindType)
+						@visual.KV("Timeout", fmt.Sprintf("%dms", ts.TimeoutMs))
+						@visual.KV("Restart", ts.RestartType)
+						if ts.IntervalMs > 0 {
+							@visual.KV("Interval", fmt.Sprintf("%dms", ts.IntervalMs))
+						}
+						@visual.KV("Admission", ts.Admission)
+						@visual.KV("Backoff", fmt.Sprintf("jitter=%s first=%dms max=%dms factor=%.1f",
+							ts.Jitter, ts.BackoffFirstMs, ts.BackoffMaxMs, ts.BackoffFactor))
+						@visual.KV("Version", fmt.Sprintf("%d", ts.Version))
+						if len(ts.Targets) > 0 {
+							@visual.KV("Targets", strings.Join(ts.Targets, ", "))
+						}
+					</dl>
+				</div>
+
+				<!-- CreateSpec JSON -->
+				if len(ts.CreateSpec) > 0 {
+					<div class="pt-3 border-t border-border">
+						<div class="flex items-center justify-between mb-2">
+							<span class="text-[11px] uppercase tracking-[0.05em] text-muted">Agent CreateSpec</span>
+							<button type="button"
+								class="text-[11px] text-primary hover:text-primary/80 transition-colors"
+								onclick={ copySpec(ts.CreateSpec) }>Copy</button>
+						</div>
+						<pre class="text-[13px] font-mono text-fg/80 whitespace-pre-wrap break-words leading-relaxed p-4 rounded-[var(--r-xs)] bg-surface-dim border border-border overflow-x-auto">{ prettyJSON(ts.CreateSpec) }</pre>
+					</div>
+				}
+			</div>
+		}
+
+		@card.CardFooter() {
+			<div class="flex items-center gap-2">
+				if p.CanDeploy {
+					@button.Button("Deploy", "button", false, button.VariantPrimary, false,
+						templ.Attributes{
+							"hx-post":    routepath.ApiSpecDeploy(ts.ID),
+							"hx-swap":    "none",
+							"hx-confirm": "Deploy this task spec to all targets?",
+						},
+					) {
+						@asset.Icon("tasks")
+					}
+				}
+				if p.CanDelete {
+					@button.Button("Delete", "button", false, button.VariantDanger, false,
+						templ.Attributes{
+							"hx-delete":  routepath.ApiSpecByID(ts.ID),
+							"hx-swap":    "none",
+							"hx-confirm": "Delete this task spec? This cannot be undone.",
+						},
+					) {
+						@asset.Icon("delete")
+					}
+				}
+			</div>
+		}
+	}
+}
+
+// Rollouts renders the per-agent rollout entries.
+templ Rollouts(states []restv1.RolloutEntry) {
+	if len(states) == 0 {
+		@status.Empty("No rollouts")
+	} else {
+		<div class="space-y-3">
+			for _, ss := range states {
+				@card.Card("") {
+					@card.CardBody() {
+						<div class="flex items-center justify-between gap-4">
+							<div class="min-w-0 space-y-1">
+								<div class="text-sm font-medium text-fg truncate">
+									{ ss.AgentID }
+								</div>
+								<div class="flex items-center gap-1.5 flex-wrap">
+									@syncStatusBadge(ss.Status)
+									@visual.Badge(fmt.Sprintf("desired: v%d", ss.DesiredVersion), visual.VariantMuted)
+									@visual.Badge(fmt.Sprintf("actual: v%d", ss.ActualVersion), visual.VariantMuted)
+								</div>
+							</div>
+							<div class="text-right shrink-0">
+								if ss.Error != "" {
+									<div class="text-xs text-danger max-w-[200px] truncate" title={ ss.Error }>
+										{ ss.Error }
+									</div>
+								}
+								if ss.Attempts > 0 {
+									<div class="text-[11px] text-muted tabular-nums">
+										{ fmt.Sprintf("%d attempts", ss.Attempts) }
+									</div>
+								}
+							</div>
+						</div>
+					}
+				}
+			}
+		</div>
+	}
+}
+
+func prettyJSON(m map[string]any) string {
+	b, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return "{}"
+	}
+	return string(b)
+}
+
+script copySpec(spec map[string]any) {
+	const text = JSON.stringify(spec, null, 2)
+	navigator.clipboard.writeText(text)
+}
+
+templ syncStatusBadge(s string) {
+	switch s {
+		case "synced":
+			@visual.Badge("Synced", visual.VariantSuccess) {
+				@visual.StatusDot("success")
+			}
+		case "pending":
+			@visual.Badge("Pending", visual.VariantPrimary) {
+				@visual.StatusDot("primary")
+			}
+		case "drift":
+			@visual.Badge("Drift", visual.VariantDanger) {
+				@visual.StatusDot("danger")
+			}
+		case "failed":
+			@visual.Badge("Failed", visual.VariantDanger) {
+				@visual.StatusDot("danger")
+			}
+		default:
+			@visual.Badge(s, visual.VariantMuted) {
+				@visual.StatusDot("muted")
+			}
+	}
+}

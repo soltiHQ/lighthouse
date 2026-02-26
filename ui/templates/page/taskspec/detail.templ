@@ -1,0 +1,26 @@
+package taskspec
+
+import (
+	"github.com/soltiHQ/control-plane/internal/ui/policy"
+	"github.com/soltiHQ/control-plane/internal/ui/routepath"
+	"github.com/soltiHQ/control-plane/internal/ui/trigger"
+	"github.com/soltiHQ/control-plane/ui/templates/layout"
+)
+
+// Detail renders the task spec detail page with sidebar + sync states panels.
+templ Detail(nav policy.Nav, specID string) {
+	@layout.DetailPage("Task Spec", "tasks", nav,
+		layout.DetailPanel{
+			ID:         "taskspec-identity",
+			URL:        routepath.ApiSpecByID(specID),
+			Trigger:    "load, " + trigger.Every1m + ", " + trigger.SpecUpdate + " from:body",
+			PreloadMsg: "Details Loading...",
+		},
+		layout.DetailPanel{
+			ID:         "taskspec-syncstates",
+			URL:        routepath.ApiSpecSync(specID),
+			Trigger:    "load, " + trigger.SpecsRefresh + ", " + trigger.SpecUpdate + " from:body",
+			PreloadMsg: "Loading sync states...",
+		},
+	)
+}

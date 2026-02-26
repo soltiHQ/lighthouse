@@ -1,8 +1,9 @@
+// Package cookie manages site cookies, used by the browser-facing UI flow.
 package cookie
 
 import "net/http"
 
-// SetAuth sets secure HTTP cookies.
+// SetAuth writes the three auth cookies to the response.
 func SetAuth(w http.ResponseWriter, r *http.Request, accessToken, refreshToken, sessionID string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",
@@ -30,7 +31,7 @@ func SetAuth(w http.ResponseWriter, r *http.Request, accessToken, refreshToken, 
 	})
 }
 
-// DeleteAuth remove the auth cookie.
+// DeleteAuth expires all three auth cookies.
 func DeleteAuth(w http.ResponseWriter, r *http.Request) {
 	secure := r.TLS != nil
 

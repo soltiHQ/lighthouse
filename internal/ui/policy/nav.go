@@ -1,16 +1,21 @@
 package policy
 
-import (
-	"github.com/soltiHQ/control-plane/domain/kind"
-	"github.com/soltiHQ/control-plane/internal/auth/identity"
-)
+import "github.com/soltiHQ/control-plane/internal/auth/identity"
 
 // Nav is a UI-oriented navigation model derived from the current identity.
+//
+// It encapsulates which top-level menu items the authenticated user may see
+// (Show* flags) and which create-actions are available (Can* flags).
+//
+// Nav is computed once per request via BuildNav and threaded into every
+// page template so that the sidebar/header can render conditionally
+// without importing the auth or permission packages directly.
 type Nav struct {
-	ShowAgents bool
-	ShowUsers  bool
-	ShowTasks  bool
-	CanAddUser bool
+	ShowUsers      bool
+	ShowTasks      bool
+	ShowAgents     bool
+	CanAddUser     bool
+	CanAddSpec bool
 }
 
 // BuildNav derives UI navigation flags from the authenticated identity.
@@ -21,9 +26,10 @@ func BuildNav(id *identity.Identity) Nav {
 
 	perms := permSet(id)
 	return Nav{
-		ShowAgents: hasAny(perms, kind.AgentsGet, kind.AgentsEdit),
-		ShowUsers:  hasAny(perms, kind.UsersGet, kind.UsersAdd, kind.UsersEdit, kind.UsersDelete),
-		ShowTasks:  true,
-		CanAddUser: hasAny(perms, kind.UsersAdd),
+		CanAddUser:     hasAny(perms, usersAdd),
+		ShowTasks:      hasAny(perms, specsGet),
+		CanAddSpec: hasAny(perms, specsAdd),
+		ShowAgents:     hasAny(perms, agentsGet, agentsEdit),
+		ShowUsers:      hasAny(perms, usersGet, usersAdd, usersEdit, usersDelete),
 	}
 }

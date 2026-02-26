@@ -1,0 +1,109 @@
+package taskspec
+
+import (
+	"fmt"
+	"net/url"
+
+	"github.com/soltiHQ/control-plane/domain/model"
+	"github.com/soltiHQ/control-plane/internal/ui/routepath"
+	"github.com/soltiHQ/control-plane/ui/templates/component/card"
+	"github.com/soltiHQ/control-plane/ui/templates/component/form"
+	"github.com/soltiHQ/control-plane/ui/templates/component/status"
+	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
+)
+
+// List renders the paginated task spec list with search and cursor-based loading.
+templ List(items []*model.Spec, nextCursor string, q string) {
+	<div class="space-y-4">
+		<div class="flex justify-center mb-10">
+			<div class="w-[320px] max-sm:w-full">
+				@form.SearchInput(
+					"taskspecs-search",
+					"q",
+					q,
+					"Search...",
+					routepath.ApiSpecs,
+					"#taskspecs-results",
+				)
+			</div>
+		</div>
+
+		@Results(items, nextCursor, q)
+	</div>
+}
+
+// Results is the HTMX-swappable wrapper for the task spec cards + pagination footer.
+templ Results(items []*model.Spec, nextCursor string, q string) {
+	<div id="taskspecs-results" class="space-y-4">
+		<div id="taskspecs-cards" class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+			@Cards(items)
+		</div>
+
+		<div id="taskspecs-footer">
+			@Footer(nextCursor, q)
+		</div>
+	</div>
+}
+
+// Cards renders the grid of task spec item cards.
+templ Cards(items []*model.Spec) {
+	if len(items) == 0 {
+		@status.Empty("No task specs found")
+	} else {
+		for _, ts := range items {
+			@card.Item(routepath.PageSpecInfoByID(ts.ID())) {
+				@card.ItemHeader() {
+					@card.ItemTitle() {
+						<span class="truncate">{ ts.Name() }</span>
+					}
+
+					@visual.Badge(fmt.Sprintf("v%d", ts.Version()), visual.VariantMuted)
+				}
+
+				@card.ItemBody() {
+					<div class="text-[11px] font-mono text-muted tracking-wide">
+						{ ts.ID() }
+					</div>
+
+					<div class="flex items-center gap-1.5 flex-wrap">
+						@visual.Badge(ts.Slot(), visual.VariantPrimary)
+						@visual.Badge(string(ts.KindType()), visual.VariantSecondary)
+						if len(ts.Targets()) > 0 {
+							@visual.Badge(fmt.Sprintf("%d targets", len(ts.Targets())), visual.VariantMuted)
+						}
+					</div>
+				}
+			}
+		}
+	}
+}
+
+// Footer renders the "Load more" sentinel for cursor-based pagination.
+templ Footer(nextCursor string, q string) {
+	if nextCursor != "" {
+		<div
+			id="taskspecs-sentinel"
+			class="h-6"
+			hx-get={ specsListURL(nextCursor, q) }
+			hx-trigger="revealed"
+			hx-target="#taskspecs-cards"
+			hx-swap="beforeend"
+			hx-sync="#taskspecs-sentinel:replace"
+		></div>
+	}
+}
+
+func specsListURL(nextCursor string, q string) string {
+	v := url.Values{}
+	if nextCursor != "" {
+		v.Set("cursor", nextCursor)
+	}
+	if q != "" {
+		v.Set("q", q)
+	}
+	qs := v.Encode()
+	if qs == "" {
+		return routepath.ApiSpecs
+	}
+	return routepath.ApiSpecs + "?" + qs
+}

@@ -19,7 +19,22 @@ type TaskFilter struct {
 	Offset int
 }
 
+// TaskSubmission describes a task to push to an agent.
+// The Spec field is the agent CreateSpec JSON (slot, kind, timeoutMs, restart, backoff, admission, labels).
+type TaskSubmission struct {
+	Spec map[string]any `json:"spec"`
+}
+
+// SpecExport describes a task spec as reported by an agent via export.
+type SpecExport struct {
+	Slot    string         `json:"slot"`
+	Kind    map[string]any `json:"kind,omitempty"`
+	Version int            `json:"version"`
+}
+
 // AgentProxy is the interface for outbound communication with an agent.
 type AgentProxy interface {
 	ListTasks(ctx context.Context, filter TaskFilter) (*proxyv1.TaskListResponse, error)
+	SubmitTask(ctx context.Context, sub TaskSubmission) error
+	ExportSpecs(ctx context.Context) ([]SpecExport, error)
 }

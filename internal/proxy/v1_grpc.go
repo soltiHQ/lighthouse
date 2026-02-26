@@ -61,6 +61,14 @@ func (p *grpcProxyV1) ListTasks(ctx context.Context, f TaskFilter) (*proxyv1.Tas
 	}, nil
 }
 
+func (p *grpcProxyV1) SubmitTask(_ context.Context, _ TaskSubmission) error {
+	return fmt.Errorf("%w: gRPC SubmitTask not implemented", ErrSubmitTask)
+}
+
+func (p *grpcProxyV1) ExportSpecs(_ context.Context) ([]SpecExport, error) {
+	return nil, fmt.Errorf("%w: gRPC ExportSpecs not implemented", ErrExportSpecs)
+}
+
 // v1TaskStatusString converts a v1 proto TaskStatus enum to a lowercase string.
 //
 //	TASK_STATUS_RUNNING → "running"

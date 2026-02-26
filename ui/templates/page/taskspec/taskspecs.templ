@@ -1,0 +1,27 @@
+package taskspec
+
+import (
+	"github.com/soltiHQ/control-plane/internal/ui/policy"
+	"github.com/soltiHQ/control-plane/internal/ui/routepath"
+	"github.com/soltiHQ/control-plane/internal/ui/trigger"
+	"github.com/soltiHQ/control-plane/ui/templates/asset"
+	"github.com/soltiHQ/control-plane/ui/templates/component/button"
+	"github.com/soltiHQ/control-plane/ui/templates/layout"
+)
+
+// Specs renders the task spec list page with HTMX auto-refresh.
+templ Specs(nav policy.Nav) {
+	@layout.ListPage("Task Specs", "tasks", nav) {
+		@layout.ListHeader("Task management") {
+			if nav.CanAddSpec {
+				<a href={ templ.SafeURL(routepath.PageSpecNew) }>
+					@button.Button("Add", "button", false, button.VariantPrimary, false, templ.Attributes{}) {
+						@asset.Icon("add")
+					}
+				</a>
+			}
+		}
+
+		@layout.HTMXLoader("taskspecs-list", routepath.ApiSpecs, "load, "+trigger.SpecsRefresh, "Loading...")
+	}
+}

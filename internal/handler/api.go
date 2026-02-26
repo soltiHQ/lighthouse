@@ -22,18 +22,20 @@ import (
 	"github.com/soltiHQ/control-plane/internal/service/agent"
 	"github.com/soltiHQ/control-plane/internal/service/credential"
 	"github.com/soltiHQ/control-plane/internal/service/session"
+	"github.com/soltiHQ/control-plane/internal/service/taskspec"
 	"github.com/soltiHQ/control-plane/internal/service/user"
 	"github.com/soltiHQ/control-plane/internal/storage"
 	"github.com/soltiHQ/control-plane/internal/storage/inmemory"
-	"github.com/soltiHQ/control-plane/internal/transport/http/apimap"
+	apimapv1 "github.com/soltiHQ/control-plane/internal/transport/http/apimap/v1"
 	"github.com/soltiHQ/control-plane/internal/transport/http/middleware"
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
 	"github.com/soltiHQ/control-plane/internal/transport/http/route"
 	"github.com/soltiHQ/control-plane/internal/transportctx"
 	"github.com/soltiHQ/control-plane/internal/ui/policy"
-	contentAgent "github.com/soltiHQ/control-plane/ui/templates/content/agent"
-	contentUser "github.com/soltiHQ/control-plane/ui/templates/content/user"
+	contentAgent    "github.com/soltiHQ/control-plane/ui/templates/content/agent"
+	contentSpec "github.com/soltiHQ/control-plane/ui/templates/content/taskspec"
+	contentUser     "github.com/soltiHQ/control-plane/ui/templates/content/user"
 )
 
 type (
@@ -59,6 +61,7 @@ type API struct {
 	sessionSVC    *session.Service
 	credentialSVC *credential.Service
 	agentSVC      *agent.Service
+	specSVC   *taskspec.Service
 	proxyPool     *proxy.Pool
 }
 
@@ -70,6 +73,7 @@ func NewAPI(
 	sessionSVC *session.Service,
 	credentialSVC *credential.Service,
 	agentSVC *agent.Service,
+	specSVC *taskspec.Service,
 	proxyPool *proxy.Pool,
 ) *API {
 	if accessSVC == nil {
@@ -87,6 +91,9 @@ func NewAPI(
 	if agentSVC == nil {
 		panic("handler.API: agentSVC is nil")
 	}
+	if specSVC == nil {
+		panic("handler.API: specSVC is nil")
+	}
 	if proxyPool == nil {
 		panic("handler.API: proxyPool is nil")
 	}
@@ -97,6 +104,7 @@ func NewAPI(
 		sessionSVC:    sessionSVC,
 		credentialSVC: credentialSVC,
 		agentSVC:      agentSVC,
+		specSVC:   specSVC,
 		proxyPool:     proxyPool,
 	}
 }
@@ -109,6 +117,8 @@ func (a *API) Routes(mux *http.ServeMux, auth route.BaseMW, _ route.PermMW, comm
 	route.HandleFunc(mux, routepath.ApiSession, a.SessionsRouter, append(common, auth)...)
 	route.HandleFunc(mux, routepath.ApiAgents, a.Agents, append(common, auth)...)
 	route.HandleFunc(mux, routepath.ApiAgent, a.AgentsRouter, append(common, auth)...)
+	route.HandleFunc(mux, routepath.ApiSpecs, a.Specs, append(common, auth)...)
+	route.HandleFunc(mux, routepath.ApiSpec, a.SpecsRouter, append(common, auth)...)
 	route.HandleFunc(mux, routepath.ApiPermissions, a.Permissions, append(common, auth)...)
 	route.HandleFunc(mux, routepath.ApiRoles, a.Roles, append(common, auth)...)
 }
@@ -119,7 +129,7 @@ func (a *API) Routes(mux *http.ServeMux, auth route.BaseMW, _ route.PermMW, comm
 //   - GET  /api/v1/users
 //   - POST /api/v1/users
 func (a *API) Users(w http.ResponseWriter, r *http.Request) {
-	mode := response.ModeFromRequest(r)
+	mode := httpctx.ModeFromRequest(r)
 	if r.URL.Path != routepath.ApiUsers {
 		response.NotFound(w, r, mode)
 		return
@@ -158,7 +168,7 @@ func (a *API) Users(w http.ResponseWriter, r *http.Request) {
 //   - POST   /api/v1/users/{id}/password
 func (a *API) UsersRouter(w http.ResponseWriter, r *http.Request) {
 	var (
-		mode = response.ModeFromRequest(r)
+		mode = httpctx.ModeFromRequest(r)
 		rest = strings.Trim(strings.TrimPrefix(r.URL.Path, routepath.ApiUser), "/")
 	)
 	if rest == "" {
@@ -262,7 +272,7 @@ func (a *API) UsersRouter(w http.ResponseWriter, r *http.Request) {
 //   - POST /api/v1/sessions/{sessionID}/revoke
 func (a *API) SessionsRouter(w http.ResponseWriter, r *http.Request) {
 	var (
-		mode = response.ModeFromRequest(r)
+		mode = httpctx.ModeFromRequest(r)
 		rest = strings.Trim(strings.TrimPrefix(r.URL.Path, routepath.ApiSession), "/")
 	)
 	if rest == "" {
@@ -296,7 +306,7 @@ func (a *API) SessionsRouter(w http.ResponseWriter, r *http.Request) {
 // Supported:
 //   - GET /api/v1/agents
 func (a *API) Agents(w http.ResponseWriter, r *http.Request) {
-	mode := response.ModeFromRequest(r)
+	mode := httpctx.ModeFromRequest(r)
 	if r.URL.Path != routepath.ApiAgents {
 		response.NotFound(w, r, mode)
 		return
@@ -324,7 +334,7 @@ func (a *API) Agents(w http.ResponseWriter, r *http.Request) {
 //   - GET  /api/v1/agents/{id}/tasks
 func (a *API) AgentsRouter(w http.ResponseWriter, r *http.Request) {
 	var (
-		mode = response.ModeFromRequest(r)
+		mode = httpctx.ModeFromRequest(r)
 		rest = strings.Trim(strings.TrimPrefix(r.URL.Path, routepath.ApiAgent), "/")
 	)
 	if rest == "" {
@@ -391,7 +401,7 @@ func (a *API) AgentsRouter(w http.ResponseWriter, r *http.Request) {
 // Supported:
 //   - GET /api/v1/permissions
 func (a *API) Permissions(w http.ResponseWriter, r *http.Request) {
-	mode := response.ModeFromRequest(r)
+	mode := httpctx.ModeFromRequest(r)
 	switch r.Method {
 	case http.MethodGet:
 		middleware.RequirePermission(kind.UsersEdit)(
@@ -411,7 +421,7 @@ func (a *API) Permissions(w http.ResponseWriter, r *http.Request) {
 // Supported:
 //   - GET /api/v1/roles
 func (a *API) Roles(w http.ResponseWriter, r *http.Request) {
-	mode := response.ModeFromRequest(r)
+	mode := httpctx.ModeFromRequest(r)
 	switch r.Method {
 	case http.MethodGet:
 		middleware.RequirePermission(kind.UsersEdit)(
@@ -431,7 +441,7 @@ func (a *API) permissionsList(w http.ResponseWriter, r *http.Request, mode httpc
 
 	items := make([]string, 0, len(perms))
 	for _, p := range perms {
-		items = append(items, apimap.Permission(p))
+		items = append(items, apimapv1.Permission(p))
 	}
 	response.OK(w, r, mode, &responder.View{
 		Data: restv1.PermissionListResponse{Items: items},
@@ -451,7 +461,7 @@ func (a *API) rolesList(w http.ResponseWriter, r *http.Request, mode httpctx.Ren
 		if role == nil {
 			continue
 		}
-		items = append(items, apimap.Role(role))
+		items = append(items, apimapv1.Role(role))
 	}
 	response.OK(w, r, mode, &responder.View{
 		Data: restv1.RoleListResponse{Items: items},
@@ -491,7 +501,7 @@ func (a *API) agentList(w http.ResponseWriter, r *http.Request, mode httpctx.Ren
 		if ag == nil {
 			continue
 		}
-		items = append(items, apimap.Agent(ag))
+		items = append(items, apimapv1.Agent(ag))
 	}
 	response.OK(w, r, mode, &responder.View{
 		Data: restv1.AgentListResponse{
@@ -515,7 +525,7 @@ func (a *API) agentDetails(w http.ResponseWriter, r *http.Request, mode httpctx.
 	}
 
 	identity, _ := transportctx.Identity(r.Context())
-	apiAgent := apimap.Agent(ag)
+	apiAgent := apimapv1.Agent(ag)
 	response.OK(w, r, mode, &responder.View{
 		Data:      apiAgent,
 		Component: contentAgent.Detail(apiAgent, policy.BuildAgentDetail(identity)),
@@ -547,7 +557,7 @@ func (a *API) agentPatchLabels(w http.ResponseWriter, r *http.Request, mode http
 	}
 
 	a.logger.Info().Str("agent_id", id).Msg("agent labels updated")
-	w.Header().Set(trigger.Header, trigger.AgentUpdate)
+	trigger.Set(w, trigger.AgentUpdate)
 	response.NoContent(w, r)
 }
 
@@ -647,7 +657,7 @@ func (a *API) userList(w http.ResponseWriter, r *http.Request, mode httpctx.Rend
 		if u == nil {
 			continue
 		}
-		items = append(items, apimap.User(u))
+		items = append(items, apimapv1.User(u))
 	}
 	response.OK(w, r, mode, &responder.View{
 		Data: restv1.UserListResponse{
@@ -671,7 +681,7 @@ func (a *API) usersDetails(w http.ResponseWriter, r *http.Request, mode httpctx.
 	}
 
 	identity, _ := transportctx.Identity(r.Context())
-	apiUser := apimap.User(u)
+	apiUser := apimapv1.User(u)
 	response.OK(w, r, mode, &responder.View{
 		Data:      apiUser,
 		Component: contentUser.Detail(apiUser, policy.BuildUserDetail(identity, id)),
@@ -691,7 +701,7 @@ func (a *API) usersSessions(w http.ResponseWriter, r *http.Request, mode httpctx
 		if s == nil {
 			continue
 		}
-		items = append(items, apimap.Session(s))
+		items = append(items, apimapv1.Session(s))
 	}
 	response.OK(w, r, mode, &responder.View{
 		Data:      restv1.SessionResponse{Items: items},
@@ -772,7 +782,7 @@ func (a *API) userUpsert(w http.ResponseWriter, r *http.Request, mode httpctx.Re
 		return
 	}
 	a.logger.Info().Str("user_id", id).Msg("user updated")
-	w.Header().Set(trigger.Header, trigger.UserUpdate)
+	trigger.Set(w, trigger.UserUpdate)
 	response.NoContent(w, r)
 }
 
@@ -812,7 +822,7 @@ func (a *API) userSetStatus(w http.ResponseWriter, r *http.Request, mode httpctx
 		return
 	}
 	a.logger.Info().Str("user_id", userID).Msg("user status changed")
-	w.Header().Set(trigger.Header, trigger.UserUpdate)
+	trigger.Set(w, trigger.UserUpdate)
 	response.NoContent(w, r)
 }
 
@@ -844,7 +854,7 @@ func (a *API) userSetPassword(w http.ResponseWriter, r *http.Request, mode httpc
 	}
 
 	a.logger.Info().Str("user_id", userID).Msg("user password changed")
-	w.Header().Set(trigger.Header, trigger.UserUpdate)
+	trigger.Set(w, trigger.UserUpdate)
 	response.NoContent(w, r)
 }
 
@@ -860,6 +870,397 @@ func (a *API) userRevokeSession(w http.ResponseWriter, r *http.Request, mode htt
 	}
 
 	a.logger.Info().Str("session_id", id).Msg("session revoked")
-	w.Header().Set(trigger.Header, trigger.UserSessionUpdate)
+	trigger.Set(w, trigger.SessionUpdate)
 	response.NoContent(w, r)
+}
+
+// Specs handles /api/v1/specs.
+//
+// Supported:
+//   - GET  /api/v1/specs
+//   - POST /api/v1/specs
+func (a *API) Specs(w http.ResponseWriter, r *http.Request) {
+	mode := httpctx.ModeFromRequest(r)
+	if r.URL.Path != routepath.ApiSpecs {
+		response.NotFound(w, r, mode)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		middleware.RequirePermission(kind.SpecsGet)(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				a.specList(w, r, mode)
+			}),
+		).ServeHTTP(w, r)
+		return
+	case http.MethodPost:
+		middleware.RequirePermission(kind.SpecsAdd)(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				a.specCreate(w, r, mode)
+			}),
+		).ServeHTTP(w, r)
+		return
+	default:
+		response.NotAllowed(w, r, mode)
+		return
+	}
+}
+
+// SpecsRouter handles /api/v1/specs/{id} and subroutes.
+//
+// Supported:
+//   - GET    /api/v1/specs/{id}
+//   - PUT    /api/v1/specs/{id}
+//   - DELETE /api/v1/specs/{id}
+//   - POST   /api/v1/specs/{id}/deploy
+//   - GET    /api/v1/specs/{id}/sync
+func (a *API) SpecsRouter(w http.ResponseWriter, r *http.Request) {
+	var (
+		mode = httpctx.ModeFromRequest(r)
+		rest = strings.Trim(strings.TrimPrefix(r.URL.Path, routepath.ApiSpec), "/")
+	)
+	if rest == "" {
+		response.NotFound(w, r, mode)
+		return
+	}
+
+	tsID, tail, _ := strings.Cut(rest, "/")
+	if tsID == "" {
+		response.NotFound(w, r, mode)
+		return
+	}
+
+	if tail == "" {
+		switch r.Method {
+		case http.MethodGet:
+			middleware.RequirePermission(kind.SpecsGet)(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a.specDetails(w, r, mode, tsID)
+				}),
+			).ServeHTTP(w, r)
+			return
+		case http.MethodPut:
+			middleware.RequirePermission(kind.SpecsEdit)(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a.specUpdate(w, r, mode, tsID)
+				}),
+			).ServeHTTP(w, r)
+			return
+		case http.MethodDelete:
+			middleware.RequirePermission(kind.SpecsEdit)(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a.specDelete(w, r, mode, tsID)
+				}),
+			).ServeHTTP(w, r)
+			return
+		default:
+			response.NotAllowed(w, r, mode)
+			return
+		}
+	}
+
+	action, extra, _ := strings.Cut(tail, "/")
+	if extra != "" {
+		response.NotFound(w, r, mode)
+		return
+	}
+
+	switch action {
+	case "deploy":
+		if r.Method != http.MethodPost {
+			response.NotAllowed(w, r, mode)
+			return
+		}
+		middleware.RequirePermission(kind.SpecsDeploy)(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				a.specDeploy(w, r, mode, tsID)
+			}),
+		).ServeHTTP(w, r)
+		return
+	case "sync":
+		if r.Method != http.MethodGet {
+			response.NotAllowed(w, r, mode)
+			return
+		}
+		middleware.RequirePermission(kind.SpecsGet)(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				a.specRollouts(w, r, mode, tsID)
+			}),
+		).ServeHTTP(w, r)
+		return
+	default:
+		response.NotFound(w, r, mode)
+		return
+	}
+}
+
+func (a *API) specList(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
+	var (
+		limit  int
+		filter storage.SpecFilter
+
+		cursor = r.URL.Query().Get("cursor")
+		q      = r.URL.Query().Get("q")
+	)
+	if raw := r.URL.Query().Get("limit"); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil {
+			limit = n
+		}
+	}
+	if q != "" {
+		filter = inmemory.NewSpecFilter().Query(q)
+	}
+
+	res, err := a.specSVC.List(r.Context(), taskspec.ListQuery{
+		Limit:  limit,
+		Cursor: cursor,
+		Filter: filter,
+	})
+	if err != nil {
+		a.logger.Error().Err(err).Msg("spec list failed")
+		response.Unavailable(w, r, mode)
+		return
+	}
+
+	items := make([]restv1.Spec, 0, len(res.Items))
+	for _, ts := range res.Items {
+		if ts == nil {
+			continue
+		}
+		items = append(items, apimapv1.Spec(ts))
+	}
+	response.OK(w, r, mode, &responder.View{
+		Data: restv1.SpecListResponse{
+			Items:      items,
+			NextCursor: res.NextCursor,
+		},
+		Component: contentSpec.List(res.Items, res.NextCursor, q),
+	})
+}
+
+func (a *API) specDetails(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, id string) {
+	ts, err := a.specSVC.Get(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			response.NotFound(w, r, mode)
+			return
+		}
+		a.logger.Error().Err(err).Str("spec_id", id).Msg("spec get failed")
+		response.Unavailable(w, r, mode)
+		return
+	}
+
+	states, err := a.specSVC.RolloutsBySpec(r.Context(), id)
+	if err != nil {
+		a.logger.Error().Err(err).Str("spec_id", id).Msg("spec rollouts failed")
+		response.Unavailable(w, r, mode)
+		return
+	}
+
+	identity, _ := transportctx.Identity(r.Context())
+	dto := apimapv1.RolloutSpec(ts, states)
+	response.OK(w, r, mode, &responder.View{
+		Data:      dto,
+		Component: contentSpec.Detail(dto, policy.BuildSpecDetail(identity)),
+	})
+}
+
+func (a *API) specCreate(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
+	var in restv1.SpecCreateRequest
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		response.BadRequest(w, r, mode)
+		return
+	}
+
+	if in.Name == "" || in.Slot == "" {
+		response.BadRequest(w, r, mode)
+		return
+	}
+
+	ts, err := model.NewSpec(ksuid.New().String(), in.Name, in.Slot)
+	if err != nil {
+		response.BadRequest(w, r, mode)
+		return
+	}
+
+	// Kind
+	if in.KindType != "" {
+		ts.SetKindType(kind.TaskKindType(in.KindType))
+	}
+	if in.KindConfig != nil {
+		ts.SetKindConfig(in.KindConfig)
+	}
+
+	// Lifecycle
+	if in.TimeoutMs > 0 {
+		ts.SetTimeoutMs(in.TimeoutMs)
+	}
+	if in.RestartType != "" {
+		ts.SetRestartType(kind.RestartType(in.RestartType))
+	}
+	if in.IntervalMs > 0 {
+		ts.SetIntervalMs(in.IntervalMs)
+	}
+	ts.SetBackoff(model.BackoffConfig{
+		Jitter:  kind.JitterStrategy(in.Jitter),
+		FirstMs: in.BackoffFirstMs,
+		MaxMs:   in.BackoffMaxMs,
+		Factor:  in.BackoffFactor,
+	})
+	if in.Admission != "" {
+		ts.SetAdmission(kind.AdmissionStrategy(in.Admission))
+	}
+
+	// Targets
+	if len(in.Targets) > 0 {
+		ts.SetTargets(in.Targets)
+	}
+	if len(in.TargetLabels) > 0 {
+		ts.SetTargetLabels(in.TargetLabels)
+	}
+	if len(in.RunnerLabels) > 0 {
+		ts.SetRunnerLabels(in.RunnerLabels)
+	}
+
+	if err := a.specSVC.Create(r.Context(), ts); err != nil {
+		a.logger.Error().Err(err).Msg("spec create failed")
+		response.Unavailable(w, r, mode)
+		return
+	}
+
+	a.logger.Info().Str("spec_id", ts.ID()).Str("name", ts.Name()).Msg("spec created")
+	trigger.Redirect(w, routepath.PageSpecs)
+	response.NoContent(w, r)
+}
+
+func (a *API) specUpdate(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, id string) {
+	ts, err := a.specSVC.Get(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			response.NotFound(w, r, mode)
+			return
+		}
+		a.logger.Error().Err(err).Str("spec_id", id).Msg("spec get failed")
+		response.Unavailable(w, r, mode)
+		return
+	}
+
+	var in restv1.SpecCreateRequest
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		response.BadRequest(w, r, mode)
+		return
+	}
+
+	if in.Name != "" {
+		ts.SetName(in.Name)
+	}
+	if in.Slot != "" {
+		ts.SetSlot(in.Slot)
+	}
+
+	// Kind
+	if in.KindType != "" {
+		ts.SetKindType(kind.TaskKindType(in.KindType))
+	}
+	if in.KindConfig != nil {
+		ts.SetKindConfig(in.KindConfig)
+	}
+
+	// Lifecycle
+	if in.TimeoutMs > 0 {
+		ts.SetTimeoutMs(in.TimeoutMs)
+	}
+	if in.RestartType != "" {
+		ts.SetRestartType(kind.RestartType(in.RestartType))
+	}
+	if in.IntervalMs > 0 {
+		ts.SetIntervalMs(in.IntervalMs)
+	}
+	if in.Jitter != "" || in.BackoffFirstMs > 0 || in.BackoffMaxMs > 0 || in.BackoffFactor > 0 {
+		b := ts.Backoff()
+		if in.Jitter != "" {
+			b.Jitter = kind.JitterStrategy(in.Jitter)
+		}
+		if in.BackoffFirstMs > 0 {
+			b.FirstMs = in.BackoffFirstMs
+		}
+		if in.BackoffMaxMs > 0 {
+			b.MaxMs = in.BackoffMaxMs
+		}
+		if in.BackoffFactor > 0 {
+			b.Factor = in.BackoffFactor
+		}
+		ts.SetBackoff(b)
+	}
+	if in.Admission != "" {
+		ts.SetAdmission(kind.AdmissionStrategy(in.Admission))
+	}
+
+	// Targets
+	if in.Targets != nil {
+		ts.SetTargets(in.Targets)
+	}
+	if in.TargetLabels != nil {
+		ts.SetTargetLabels(in.TargetLabels)
+	}
+	if in.RunnerLabels != nil {
+		ts.SetRunnerLabels(in.RunnerLabels)
+	}
+
+	if err := a.specSVC.Update(r.Context(), ts); err != nil {
+		a.logger.Error().Err(err).Str("spec_id", id).Msg("spec update failed")
+		response.Unavailable(w, r, mode)
+		return
+	}
+
+	a.logger.Info().Str("spec_id", id).Msg("spec updated")
+	trigger.Set(w, trigger.SpecUpdate)
+	response.NoContent(w, r)
+}
+
+func (a *API) specDelete(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, id string) {
+	err := a.specSVC.Delete(r.Context(), id)
+	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+		a.logger.Error().Err(err).Str("spec_id", id).Msg("spec delete failed")
+		response.Unavailable(w, r, mode)
+		return
+	}
+	a.logger.Info().Str("spec_id", id).Msg("spec deleted")
+	trigger.Redirect(w, routepath.PageSpecs)
+	response.NoContent(w, r)
+}
+
+func (a *API) specDeploy(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, id string) {
+	if err := a.specSVC.Deploy(r.Context(), id); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			response.NotFound(w, r, mode)
+			return
+		}
+		a.logger.Error().Err(err).Str("spec_id", id).Msg("spec deploy failed")
+		response.Unavailable(w, r, mode)
+		return
+	}
+
+	a.logger.Info().Str("spec_id", id).Msg("spec deployed")
+	trigger.Set(w, trigger.SpecUpdate)
+	response.NoContent(w, r)
+}
+
+func (a *API) specRollouts(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, id string) {
+	states, err := a.specSVC.RolloutsBySpec(r.Context(), id)
+	if err != nil {
+		a.logger.Error().Err(err).Str("spec_id", id).Msg("spec rollouts failed")
+		response.Unavailable(w, r, mode)
+		return
+	}
+
+	items := make([]restv1.RolloutEntry, 0, len(states))
+	for _, ss := range states {
+		items = append(items, apimapv1.RolloutEntry(ss))
+	}
+	response.OK(w, r, mode, &responder.View{
+		Data:      items,
+		Component: contentSpec.Rollouts(items),
+	})
 }

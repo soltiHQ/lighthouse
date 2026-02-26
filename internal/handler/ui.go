@@ -14,14 +14,16 @@ import (
 	"github.com/soltiHQ/control-plane/internal/transport/http/ratelimitkey"
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
+	"github.com/soltiHQ/control-plane/internal/transport/httpctx"
 	"github.com/soltiHQ/control-plane/internal/transport/http/route"
 	"github.com/soltiHQ/control-plane/internal/transportctx"
 	"github.com/soltiHQ/control-plane/internal/ui/policy"
 	"github.com/soltiHQ/control-plane/internal/ui/routepath"
-	pageAgent "github.com/soltiHQ/control-plane/ui/templates/page/agent"
-	pageHome "github.com/soltiHQ/control-plane/ui/templates/page/home"
-	pageSystem "github.com/soltiHQ/control-plane/ui/templates/page/system"
-	pageUser "github.com/soltiHQ/control-plane/ui/templates/page/user"
+	pageAgent    "github.com/soltiHQ/control-plane/ui/templates/page/agent"
+	pageHome     "github.com/soltiHQ/control-plane/ui/templates/page/home"
+	pageSystem   "github.com/soltiHQ/control-plane/ui/templates/page/system"
+	pageSpec "github.com/soltiHQ/control-plane/ui/templates/page/taskspec"
+	pageUser     "github.com/soltiHQ/control-plane/ui/templates/page/user"
 )
 
 // UI handlers
@@ -50,12 +52,15 @@ func (u *UI) Routes(mux *http.ServeMux, auth route.BaseMW, perm route.PermMW, co
 	route.HandleFunc(mux, routepath.PageUserInfo, u.UserDetail, append(common, auth, perm(kind.UsersGet))...)
 	route.HandleFunc(mux, routepath.PageAgents, u.Agents, append(common, auth)...)
 	route.HandleFunc(mux, routepath.PageAgentInfo, u.AgentDetail, append(common, auth, perm(kind.AgentsGet))...)
+	route.HandleFunc(mux, routepath.PageSpecs, u.Specs, append(common, auth, perm(kind.SpecsGet))...)
+	route.HandleFunc(mux, routepath.PageSpecNew, u.SpecNew, append(common, auth, perm(kind.SpecsAdd))...)
+	route.HandleFunc(mux, routepath.PageSpecInfo, u.SpecDetail, append(common, auth, perm(kind.SpecsGet))...)
 	route.HandleFunc(mux, routepath.PageHome, u.Main, append(common, auth)...)
 }
 
 // Login handles GET/POST /login.
 func (u *UI) Login(w http.ResponseWriter, r *http.Request) {
-	mode := response.ModeFromRequest(r)
+	mode := httpctx.ModeFromRequest(r)
 
 	switch r.Method {
 	case http.MethodGet:
@@ -126,7 +131,7 @@ func (u *UI) Login(w http.ResponseWriter, r *http.Request) {
 
 // Logout handles GET/POST /logout.
 func (u *UI) Logout(w http.ResponseWriter, r *http.Request) {
-	mode := response.ModeFromRequest(r)
+	mode := httpctx.ModeFromRequest(r)
 
 	if r.URL.Path != routepath.PageLogout {
 		response.NotFound(w, r, mode)
@@ -180,8 +185,29 @@ func (u *UI) UserDetail(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Specs handle GET /specs.
+func (u *UI) Specs(w http.ResponseWriter, r *http.Request) {
+	u.page(w, r, http.MethodGet, routepath.PageSpecs, func(nav policy.Nav) templ.Component {
+		return pageSpec.Specs(nav)
+	})
+}
+
+// SpecNew handle GET /specs/new.
+func (u *UI) SpecNew(w http.ResponseWriter, r *http.Request) {
+	u.page(w, r, http.MethodGet, routepath.PageSpecNew, func(nav policy.Nav) templ.Component {
+		return pageSpec.New(nav)
+	})
+}
+
+// SpecDetail handle GET /specs/info/{}.
+func (u *UI) SpecDetail(w http.ResponseWriter, r *http.Request) {
+	u.pageParam(w, r, http.MethodGet, routepath.PageSpecInfo, func(nav policy.Nav, specID string) templ.Component {
+		return pageSpec.Detail(nav, specID)
+	})
+}
+
 func (u *UI) page(w http.ResponseWriter, r *http.Request, m, p string, render func(nav policy.Nav) templ.Component) {
-	mode := response.ModeFromRequest(r)
+	mode := httpctx.ModeFromRequest(r)
 	if r.Method != m {
 		response.NotAllowed(w, r, mode)
 		return
@@ -202,7 +228,7 @@ func (u *UI) page(w http.ResponseWriter, r *http.Request, m, p string, render fu
 }
 
 func (u *UI) pageParam(w http.ResponseWriter, r *http.Request, m, p string, render func(nav policy.Nav, param string) templ.Component) {
-	mode := response.ModeFromRequest(r)
+	mode := httpctx.ModeFromRequest(r)
 	if r.Method != m {
 		response.NotAllowed(w, r, mode)
 		return

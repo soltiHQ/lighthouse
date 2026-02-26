@@ -26,3 +26,9 @@ type UserFilter interface{}
 // Note: This is enforced by backend implementations via type assertion
 // to their concrete filter type (e.g. inmemory.RoleFilter).
 type RoleFilter interface{}
+
+// SpecFilter defines a backend-specific query object for specs.
+type SpecFilter interface{}
+
+// RolloutFilter defines a backend-specific query object for rollouts.
+type RolloutFilter interface{}

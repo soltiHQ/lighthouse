@@ -22,13 +22,15 @@ import (
 	"github.com/soltiHQ/control-plane/internal/server/runner/grpcserver"
 	"github.com/soltiHQ/control-plane/internal/server/runner/httpserver"
 	"github.com/soltiHQ/control-plane/internal/server/runner/lifecycle"
+	syncrunner "github.com/soltiHQ/control-plane/internal/server/runner/sync"
 	"github.com/soltiHQ/control-plane/internal/service/access"
 	"github.com/soltiHQ/control-plane/internal/service/agent"
 	"github.com/soltiHQ/control-plane/internal/service/credential"
 	"github.com/soltiHQ/control-plane/internal/service/session"
+	"github.com/soltiHQ/control-plane/internal/service/taskspec"
 	"github.com/soltiHQ/control-plane/internal/service/user"
 	"github.com/soltiHQ/control-plane/internal/storage/inmemory"
-	interceptor "github.com/soltiHQ/control-plane/internal/transport/grpc/interceptors"
+	"github.com/soltiHQ/control-plane/internal/transport/grpc/interceptor"
 	"github.com/soltiHQ/control-plane/internal/transport/http/middleware"
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
 	"github.com/soltiHQ/control-plane/internal/transport/http/route"
@@ -64,6 +66,7 @@ func main() {
 		sessionSVC    = session.New(store)
 		credentialSVC = credential.New(store, logger)
 		agentSVC      = agent.New(store)
+		specSVC       = taskspec.New(store)
 	)
 
 	proxyPool := proxy.NewPool()
@@ -74,13 +77,18 @@ func main() {
 		logger.Fatal().Err(err).Msg("failed to create lifecycle runner")
 	}
 
+	syncRunner, err := syncrunner.New(syncrunner.Config{}, logger, store, proxyPool)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to create sync runner")
+	}
+
 	var (
 		jsonResp = responder.NewJSON()
 		htmlResp = responder.NewHTML()
 	)
 	var (
 		uiHandler     = handler.NewUI(logger, authSVC)
-		apiHandler    = handler.NewAPI(logger, userSVC, authSVC, sessionSVC, credentialSVC, agentSVC, proxyPool)
+		apiHandler    = handler.NewAPI(logger, userSVC, authSVC, sessionSVC, credentialSVC, agentSVC, specSVC, proxyPool)
 		staticHandler = handler.NewStatic(logger)
 	)
 	authMW := middleware.Auth(authModel.Verifier, authModel.Session)
@@ -160,9 +168,9 @@ func main() {
 	}
 
 	// ---------------------------------------------------------------
-	// Server (4 runners)
+	// Server (5 runners)
 	// ---------------------------------------------------------------
-	srv, err := server.New(server.Config{}, logger, httpRunner, httpDiscoveryRunner, grpcRunner, lifecycleRunner)
+	srv, err := server.New(server.Config{}, logger, httpRunner, httpDiscoveryRunner, grpcRunner, lifecycleRunner, syncRunner)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to create server")
 	}

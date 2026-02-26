@@ -1,4 +1,4 @@
-package apimap
+package apimapv1
 
 import (
 	"time"
@@ -7,6 +7,7 @@ import (
 	"github.com/soltiHQ/control-plane/domain/model"
 )
 
+// Agent maps a domain Agent to its REST DTO.
 func Agent(a *model.Agent) restv1.Agent {
 	if a == nil {
 		return restv1.Agent{}

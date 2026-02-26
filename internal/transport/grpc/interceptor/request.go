@@ -26,10 +26,7 @@ func ensureRequestID(ctx context.Context) context.Context {
 	}
 
 	ctx = transportctx.WithRequestID(ctx, rid)
-
-	// Echo back in response headers so the client can correlate.
 	_ = grpc.SetHeader(ctx, metadata.Pairs(metadataKeyRequestID, rid))
-
 	return ctx
 }
 
