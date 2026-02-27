@@ -9,6 +9,10 @@ const container = "w-full max-w-md " +
 	"rounded-[var(--r-lg)] border border-border bg-card shadow-3 " +
 	"overflow-visible "
 
+const containerWide = "w-full max-w-4xl " +
+	"rounded-[var(--r-lg)] border border-border bg-card shadow-3 " +
+	"overflow-visible "
+
 const body = "p-6 space-y-2 "
 
 const title = "text-base font-semibold text-fg "

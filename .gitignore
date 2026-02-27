@@ -42,7 +42,7 @@ ui/static/js/alpine.min.js
 ui/static/js/htmx.min.js
 
 # proto
-domain/gen/
+api/gen/
 
 # templ
 ui/**/*_templ.go

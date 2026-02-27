@@ -1,3 +1,4 @@
+// Package ratelimitkey builds composite keys for authentication rate limiting.
 package ratelimitkey
 
 import (
@@ -8,6 +9,8 @@ import (
 	"strings"
 )
 
+// LoginKey returns a rate-limit key for a login attempt.
+// Format: "login:<subject>:<ip>:<ua_hash>" (subject omitted if empty).
 func LoginKey(r *http.Request, subject string) string {
 	subject = strings.TrimSpace(strings.ToLower(subject))
 

@@ -1,28 +1,29 @@
+// Package agent implements agent management use-cases:
+//   - Paginated listing and retrieval
+//   - Upsert with label and heartbeat preservation
+//   - Control-plane label patching.
 package agent
 
 import (
 	"context"
 	"errors"
 
-	"github.com/rs/zerolog"
 	"github.com/soltiHQ/control-plane/domain/model"
 	"github.com/soltiHQ/control-plane/internal/service"
 	"github.com/soltiHQ/control-plane/internal/storage"
 )
 
+// Service provides agent management operations.
 type Service struct {
-	logger zerolog.Logger
-	store  storage.AgentStore
+	store storage.AgentStore
 }
 
-func New(store storage.AgentStore, logger zerolog.Logger) *Service {
+// New creates a new agent service.
+func New(store storage.AgentStore) *Service {
 	if store == nil {
 		panic("agent.Service: store is nil")
 	}
-	return &Service{
-		logger: logger.With().Str("service", "agents").Logger(),
-		store:  store,
-	}
+	return &Service{store: store}
 }
 
 // List returns a page of agents matching the query.
@@ -77,15 +78,17 @@ func (s *Service) Upsert(ctx context.Context, m *model.Agent) error {
 		for k, v := range existing.LabelsAll() {
 			m.LabelAdd(k, v)
 		}
+		if m.HeartbeatInterval() == 0 && existing.HeartbeatInterval() > 0 {
+			m.SetHeartbeatInterval(existing.HeartbeatInterval())
+		}
 	case errors.Is(err, storage.ErrNotFound):
-		// new agent — nothing to preserve.
 	default:
 		return err
 	}
 	return s.store.UpsertAgent(ctx, m)
 }
 
-// PatchLabels replaces labels for an agent (control-plane owned).
+// PatchLabels replaces labels for an agent.
 func (s *Service) PatchLabels(ctx context.Context, req PatchLabels) (*model.Agent, error) {
 	if req.ID == "" {
 		return nil, storage.ErrInvalidArgument

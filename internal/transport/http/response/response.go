@@ -1,3 +1,8 @@
+// Package response provides one-call HTTP response helpers
+// that delegate to the negotiated Responder from httpctx.
+//
+// Each helper builds a [responder.View] with both JSON body and templ component,
+// so the same call works for API clients and for Browser/HTMX rendering.
 package response
 
 import (
@@ -12,6 +17,12 @@ import (
 	"github.com/a-h/templ"
 )
 
+type errorBody struct {
+	Code      int    `json:"code"`
+	Message   string `json:"message,omitempty"`
+	RequestID string `json:"request_id,omitempty"`
+}
+
 // OK renders a 200 response.
 func OK(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode, v *responder.View) {
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusOK, v)
@@ -22,22 +33,13 @@ func NoContent(w http.ResponseWriter, r *http.Request) {
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusNoContent, nil)
 }
 
-// json error body.
-type errorBody struct {
-	Code      int    `json:"code"`
-	Message   string `json:"message,omitempty"`
-	RequestID string `json:"request_id,omitempty"`
-}
-
 // NotFound renders a 404 response.
 func NotFound(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
-	reqId := transportctx.TryRequestID(r.Context())
-
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusNotFound, &responder.View{
 		Data: errorBody{
 			Code:      http.StatusNotFound,
 			Message:   "not found",
-			RequestID: reqId,
+			RequestID: transportctx.TryRequestID(r.Context()),
 		},
 		Component: func(m httpctx.RenderMode) templ.Component {
 			if m == httpctx.RenderPage {
@@ -45,7 +47,6 @@ func NotFound(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
 					http.StatusNotFound,
 					"Page not found",
 					"The page you are looking for doesn't exist or has been moved.",
-					reqId,
 				)
 			}
 			return nil
@@ -55,13 +56,11 @@ func NotFound(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
 
 // BadRequest renders a 400 response.
 func BadRequest(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
-	reqId := transportctx.TryRequestID(r.Context())
-
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusBadRequest, &responder.View{
 		Data: errorBody{
 			Code:      http.StatusBadRequest,
 			Message:   "invalid request",
-			RequestID: reqId,
+			RequestID: transportctx.TryRequestID(r.Context()),
 		},
 		Component: func(m httpctx.RenderMode) templ.Component {
 			if m == httpctx.RenderPage {
@@ -69,7 +68,6 @@ func BadRequest(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode)
 					http.StatusBadRequest,
 					"Invalid request",
 					"The request you sent is invalid.",
-					reqId,
 				)
 			}
 			return nil
@@ -79,13 +77,11 @@ func BadRequest(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode)
 
 // NotAllowed renders a 405 response.
 func NotAllowed(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
-	reqId := transportctx.TryRequestID(r.Context())
-
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusMethodNotAllowed, &responder.View{
 		Data: errorBody{
 			Code:      http.StatusMethodNotAllowed,
 			Message:   "not allowed",
-			RequestID: reqId,
+			RequestID: transportctx.TryRequestID(r.Context()),
 		},
 		Component: func(m httpctx.RenderMode) templ.Component {
 			if m == httpctx.RenderPage {
@@ -93,7 +89,6 @@ func NotAllowed(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode)
 					http.StatusMethodNotAllowed,
 					"Method not allowed",
 					"The method you used is not allowed on this resource.",
-					reqId,
 				)
 			}
 			return nil
@@ -103,13 +98,11 @@ func NotAllowed(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode)
 
 // Forbidden renders a 403 response.
 func Forbidden(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
-	reqId := transportctx.TryRequestID(r.Context())
-
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusForbidden, &responder.View{
 		Data: errorBody{
 			Code:      http.StatusForbidden,
 			Message:   "forbidden",
-			RequestID: reqId,
+			RequestID: transportctx.TryRequestID(r.Context()),
 		},
 		Component: func(m httpctx.RenderMode) templ.Component {
 			if m == httpctx.RenderPage {
@@ -117,7 +110,6 @@ func Forbidden(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) 
 					http.StatusForbidden,
 					"Forbidden",
 					"You are not allowed to access this page.",
-					reqId,
 				)
 			}
 			return nil
@@ -127,13 +119,11 @@ func Forbidden(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) 
 
 // Unauthorized renders a 401 response.
 func Unauthorized(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
-	reqId := transportctx.TryRequestID(r.Context())
-
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusUnauthorized, &responder.View{
 		Data: errorBody{
 			Code:      http.StatusUnauthorized,
 			Message:   "unauthorized",
-			RequestID: reqId,
+			RequestID: transportctx.TryRequestID(r.Context()),
 		},
 		Component: func(m httpctx.RenderMode) templ.Component {
 			if m == httpctx.RenderPage {
@@ -141,7 +131,6 @@ func Unauthorized(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMod
 					http.StatusUnauthorized,
 					"Unauthorized",
 					"You are not authorized to access this page.",
-					reqId,
 				)
 			}
 			return nil
@@ -151,13 +140,11 @@ func Unauthorized(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMod
 
 // Unavailable renders a 503 response.
 func Unavailable(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
-	reqId := transportctx.TryRequestID(r.Context())
-
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusServiceUnavailable, &responder.View{
 		Data: errorBody{
 			Code:      http.StatusServiceUnavailable,
 			Message:   "service unavailable",
-			RequestID: reqId,
+			RequestID: transportctx.TryRequestID(r.Context()),
 		},
 		Component: func(m httpctx.RenderMode) templ.Component {
 			if m == httpctx.RenderPage {
@@ -165,7 +152,6 @@ func Unavailable(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode
 					http.StatusServiceUnavailable,
 					"Service unavailable",
 					"The server is temporarily unable to handle the request.",
-					reqId,
 				)
 			}
 			return nil
@@ -175,13 +161,11 @@ func Unavailable(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode
 
 // AuthRateLimit renders a 429 response.
 func AuthRateLimit(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMode) {
-	reqId := transportctx.TryRequestID(r.Context())
-
 	httpctx.Responder(r.Context()).Respond(w, r, http.StatusTooManyRequests, &responder.View{
 		Data: errorBody{
 			Code:      http.StatusTooManyRequests,
 			Message:   "too many auth requests",
-			RequestID: reqId,
+			RequestID: transportctx.TryRequestID(r.Context()),
 		},
 		Component: func(m httpctx.RenderMode) templ.Component {
 			if m == httpctx.RenderPage {
@@ -189,7 +173,6 @@ func AuthRateLimit(w http.ResponseWriter, r *http.Request, mode httpctx.RenderMo
 					http.StatusTooManyRequests,
 					"Too many auth attempts",
 					"Account temporarily locked. Please try again later.",
-					reqId,
 				)
 			}
 			return nil

@@ -1,0 +1,335 @@
+package spec
+
+import (
+	"github.com/soltiHQ/control-plane/internal/uikit/routepath"
+	"github.com/soltiHQ/control-plane/ui/templates/component/button"
+	"github.com/soltiHQ/control-plane/ui/templates/component/form"
+)
+
+// BuilderPage renders the full-page split-panel spec builder.
+// Left: form sections (identity, kind, lifecycle, targets).
+// Right: live JSON preview updated reactively via Alpine.js.
+templ BuilderPage() {
+	<form
+		x-data={ builderXData(routepath.ApiAgents) }
+		x-init={ builderInitExpr() }
+		x-on:submit.prevent={ builderSubmitExpr(routepath.ApiSpecs) }
+		class="rounded-[var(--r-lg)] border border-border bg-card shadow-3 overflow-clip"
+	>
+		<div class="flex flex-col lg:flex-row">
+			<!-- Left: form -->
+			<div class="flex-1 p-6 space-y-6 lg:border-r lg:border-border lg:max-w-[520px]">
+				<h2 class="text-lg font-semibold text-fg">Create Spec</h2>
+
+				<!-- Identity -->
+				@builderSection("Identity") {
+					@builderField("name", "Name", "Spec name", true)
+					@builderField("slot", "Slot", "e.g. worker-a", true)
+				}
+
+				<!-- Kind -->
+				@builderSection("Kind") {
+					<div>
+						<label class={ form.LabelClass }>Type</label>
+						<select x-model="kind_type" class={ form.SelectClass(false, false) }>
+							<option value="subprocess">Subprocess</option>
+							<option value="wasm">WASM</option>
+							<option value="container">Container</option>
+						</select>
+					</div>
+
+					<!-- Subprocess fields -->
+					<template x-if="kind_type === 'subprocess'">
+						<div class="space-y-3">
+							@builderField("cmd", "Command", "e.g. sleep", true)
+							@builderField("args", "Args (space-separated)", "e.g. 30", false)
+							@builderField("cwd", "Working Directory", "/path/to/dir", false)
+
+							<div class="flex items-center gap-2">
+								<input type="checkbox" id="fail_on_non_zero" x-model="fail_on_non_zero"
+									class="w-4 h-4 rounded border border-input accent-primary"/>
+								<label for="fail_on_non_zero" class="text-sm text-fg">Fail on non-zero exit</label>
+							</div>
+
+							<!-- Env vars -->
+							<div>
+								<label class={ form.LabelClass }>Environment Variables</label>
+								@kvEditor("env_rows")
+							</div>
+						</div>
+					</template>
+
+					<!-- WASM raw JSON -->
+					<template x-if="kind_type === 'wasm'">
+						<div>
+							<label class={ form.LabelClass }>WASM Config (JSON)</label>
+							<textarea x-model="wasm_json" rows="5"
+								class={ textareaClass }
+								placeholder='{"module": "path.wasm", "args": []}'></textarea>
+						</div>
+					</template>
+
+					<!-- Container raw JSON -->
+					<template x-if="kind_type === 'container'">
+						<div>
+							<label class={ form.LabelClass }>Container Config (JSON)</label>
+							<textarea x-model="container_json" rows="5"
+								class={ textareaClass }
+								placeholder='{"image": "alpine:latest", "command": "sh"}'></textarea>
+						</div>
+					</template>
+				}
+
+				<!-- Lifecycle -->
+				@builderSection("Lifecycle") {
+					<div class="grid grid-cols-2 gap-3">
+						@builderField("timeout_ms", "Timeout (ms)", "30000", false)
+						<div>
+							<label class={ form.LabelClass }>Restart</label>
+							<select x-model="restart_type" class={ form.SelectClass(false, false) }>
+								<option value="never">Never</option>
+								<option value="onFailure">On Failure</option>
+								<option value="always">Always</option>
+							</select>
+						</div>
+					</div>
+
+					<template x-if="restart_type === 'always'">
+						<div>
+							@builderField("interval_ms", "Interval (ms)", "5000", false)
+						</div>
+					</template>
+
+					<div>
+						<label class={ form.LabelClass }>Admission</label>
+						<select x-model="admission" class={ form.SelectClass(false, false) }>
+							<option value="dropIfRunning">Drop if Running</option>
+							<option value="replace">Replace</option>
+							<option value="queue">Queue</option>
+						</select>
+					</div>
+				}
+
+				<!-- Backoff -->
+				@builderSection("Backoff") {
+					<div>
+						<label class={ form.LabelClass }>Preset</label>
+						<div class="flex flex-wrap gap-2">
+							@presetButton("standard", "Standard")
+							@presetButton("aggressive", "Aggressive")
+							@presetButton("gentle", "Gentle")
+							<button type="button"
+								class="px-3 py-1.5 text-xs rounded-full border transition-colors"
+								x-bind:class="backoff_preset === 'custom' ? 'bg-primary/10 border-primary text-primary' : 'border-border text-muted hover:text-fg'"
+								x-on:click="backoff_preset = 'custom'">Custom</button>
+						</div>
+					</div>
+
+					<template x-if="backoff_preset === 'custom'">
+						<div class="space-y-3">
+							<div>
+								<label class={ form.LabelClass }>Jitter</label>
+								<select x-model="jitter" class={ form.SelectClass(false, false) }>
+									<option value="none">None</option>
+									<option value="full">Full</option>
+									<option value="equal">Equal</option>
+									<option value="decorrelated">Decorrelated</option>
+								</select>
+							</div>
+							<div class="grid grid-cols-3 gap-3">
+								@builderField("backoff_first_ms", "First (ms)", "1000", false)
+								@builderField("backoff_max_ms", "Max (ms)", "5000", false)
+								@builderField("backoff_factor", "Factor", "2.0", false)
+							</div>
+						</div>
+					</template>
+				}
+
+				<!-- Targets -->
+				@builderSection("Targets") {
+					<div>
+						<div class="flex gap-2 mb-3">
+							<button type="button"
+								class="px-3 py-1.5 text-xs rounded-full border transition-colors"
+								x-bind:class="target_mode === 'agents' ? 'bg-primary/10 border-primary text-primary' : 'border-border text-muted hover:text-fg'"
+								x-on:click="target_mode = 'agents'">Agents</button>
+							<button type="button"
+								class="px-3 py-1.5 text-xs rounded-full border transition-colors"
+								x-bind:class="target_mode === 'labels' ? 'bg-primary/10 border-primary text-primary' : 'border-border text-muted hover:text-fg'"
+								x-on:click="target_mode = 'labels'">Labels</button>
+						</div>
+
+						<template x-if="target_mode === 'agents'">
+							<div>
+								@agentMultiSelect()
+							</div>
+						</template>
+
+						<template x-if="target_mode === 'labels'">
+							<div>
+								<label class={ form.LabelClass }>Target Labels</label>
+								@kvEditor("label_rows")
+							</div>
+						</template>
+					</div>
+				}
+
+				<!-- Runner Labels -->
+				@builderSection("Runner Labels") {
+					@kvEditor("runner_label_rows")
+				}
+			</div>
+
+			<!-- Right: JSON preview (sticky, scrollable) -->
+			<div class="flex-1 p-6 bg-surface-dim hidden lg:block">
+				<div class="sticky top-8 max-h-[calc(100vh-120px)] flex flex-col">
+					<div class="flex items-center justify-between mb-4 shrink-0">
+						<h3 class="text-xs font-semibold uppercase tracking-wider text-muted-strong">Live Preview</h3>
+						<button type="button"
+							class="text-xs text-primary hover:text-primary/80 transition-colors"
+							x-on:click="navigator.clipboard.writeText(previewJSON)">Copy JSON</button>
+					</div>
+					<pre
+						class="text-[13px] font-mono text-fg/80 whitespace-pre-wrap break-words leading-relaxed p-4 rounded-[var(--r-xs)] bg-card border border-border overflow-y-auto min-h-0"
+						x-text="previewJSON"></pre>
+				</div>
+			</div>
+		</div>
+
+		<!-- Footer -->
+		<div class="flex items-center justify-between gap-3 px-6 py-4 border-t border-border bg-surface-dim">
+			<a href={ templ.SafeURL(routepath.PageSpecs) }
+				class="text-sm text-muted hover:text-fg transition-colors">Cancel</a>
+			@button.Button("", "submit", false, button.VariantPrimary, false,
+				templ.Attributes{"x-bind:disabled": "submitting || !name || !slot"},
+			) {
+				<span x-show="!submitting">Create Spec</span>
+				<span x-show="submitting" x-cloak>Creating...</span>
+			}
+		</div>
+	</form>
+}
+
+// builderSection renders a labelled form section.
+templ builderSection(label string) {
+	<fieldset class="space-y-3">
+		<legend class="text-xs font-semibold uppercase tracking-wider text-muted-strong border-b border-border pb-2 w-full">{ label }</legend>
+		{ children... }
+	</fieldset>
+}
+
+// builderField renders a single text input bound to Alpine.js via x-model.
+templ builderField(id string, label string, placeholder string, required bool) {
+	<div>
+		<label for={ id } class={ form.LabelClass }>{ label }</label>
+		@form.Input(
+			id, "text", "", placeholder,
+			required, false, "",
+			templ.Attributes{"x-model": id},
+		)
+	</div>
+}
+
+// presetButton renders a backoff preset toggle button.
+templ presetButton(preset string, label string) {
+	<button type="button"
+		class="px-3 py-1.5 text-xs rounded-full border transition-colors"
+		x-bind:class={ "backoff_preset === '" + preset + "' ? 'bg-primary/10 border-primary text-primary' : 'border-border text-muted hover:text-fg'" }
+		x-on:click={ "applyPreset('" + preset + "')" }>{ label }</button>
+}
+
+// agentMultiSelect renders the agent multi-select dropdown.
+templ agentMultiSelect() {
+	<label class={ form.LabelClass }>Select Agents</label>
+	<div class={ msWrapper } x-on:click.outside="agents_open = false">
+		<div class={ msTrigger } x-on:click="agents_open = !agents_open">
+			<template x-for="tag in agents" :key="tag">
+				<span class={ msTag }>
+					<span x-text="tag"></span>
+					<span class={ msTagRemove }
+						x-on:click.stop="agents = agents.filter(x => x !== tag)">&times;</span>
+				</span>
+			</template>
+			<span x-show="agents.length === 0" class={ msPlaceholder }>Select agents...</span>
+		</div>
+		<div x-show="agents_open" x-cloak x-transition.opacity class={ msDropdown }>
+			<template x-for="opt in agents_opts" :key="opt">
+				<div class={ msOption }
+					x-on:click="agents.includes(opt) ? agents = agents.filter(x => x !== opt) : agents.push(opt)">
+					<input type="checkbox" class={ msCheckbox } x-bind:checked="agents.includes(opt)"/>
+					<span x-text="opt"></span>
+				</div>
+			</template>
+			<div x-show="agents_opts.length === 0" class="px-3 py-2 text-sm text-muted">
+				No agents available
+			</div>
+		</div>
+	</div>
+}
+
+// kvEditor renders a dynamic key-value pair editor.
+templ kvEditor(rowsVar string) {
+	<div class="space-y-2">
+		<template x-for={ "(" + kvIterExpr(rowsVar) } :key="idx">
+			<div class="flex items-center gap-2">
+				<input type="text" x-model="row.key" placeholder="key"
+					class={ kvInput }/>
+				<input type="text" x-model="row.value" placeholder="value"
+					class={ kvInput }/>
+				<button type="button"
+					class="shrink-0 w-7 h-7 flex items-center justify-center rounded text-muted hover:text-danger transition-colors"
+					x-on:click={ rowsVar + ".splice(idx, 1)" }>&times;</button>
+			</div>
+		</template>
+		<button type="button"
+			class="text-xs text-primary hover:text-primary/80 transition-colors"
+			x-on:click={ rowsVar + ".push({key:'',value:''})" }>+ Add row</button>
+	</div>
+}
+
+func kvIterExpr(v string) string {
+	return "row, idx) in " + v
+}
+
+// Style constants for multi-select and form elements.
+const msWrapper = "relative "
+const msTrigger = "flex flex-wrap items-center gap-1.5 " +
+	"min-h-[2.75rem] w-full px-3 py-2 " +
+	"rounded-[var(--r-xs)] " +
+	"bg-card text-fg text-sm " +
+	"border border-input " +
+	"hover:border-border " +
+	"focus:ring-2 focus:ring-primary/25 focus:border-primary " +
+	"outline-none transition-colors cursor-pointer "
+const msPlaceholder = "text-muted-strong text-sm "
+const msTag = "inline-flex items-center gap-1 " +
+	"rounded-full px-2.5 py-0.5 " +
+	"text-[11px] font-medium " +
+	"bg-primary/10 text-primary border border-primary/20 "
+const msTagRemove = "hover:text-danger transition-colors cursor-pointer shrink-0 "
+const msDropdown = "absolute z-10 bottom-full mb-1 w-full " +
+	"max-h-48 overflow-y-auto " +
+	"rounded-[var(--r-xs)] " +
+	"bg-card border border-border shadow-2 " +
+	"py-1 "
+const msOption = "flex items-center gap-2 " +
+	"px-3 py-2 text-sm text-fg " +
+	"hover:bg-surface-dim " +
+	"cursor-pointer transition-colors "
+const msCheckbox = "w-4 h-4 rounded " +
+	"border border-input " +
+	"accent-primary pointer-events-none "
+const textareaClass = "block w-full px-4 py-3 " +
+	"rounded-[var(--r-xs)] " +
+	"bg-card text-fg text-sm font-mono " +
+	"border border-input " +
+	"hover:border-border " +
+	"focus:ring-2 focus:ring-primary/25 focus:border-primary " +
+	"outline-none transition-colors resize-y "
+const kvInput = "flex-1 min-w-0 h-9 px-3 " +
+	"rounded-[var(--r-xs)] " +
+	"bg-card text-fg text-sm " +
+	"border border-input " +
+	"hover:border-border " +
+	"focus:ring-2 focus:ring-primary/25 focus:border-primary " +
+	"outline-none transition-colors "

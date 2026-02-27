@@ -1,0 +1,45 @@
+package layout
+
+import (
+	"github.com/soltiHQ/control-plane/internal/uikit/policy"
+	"github.com/soltiHQ/control-plane/ui/templates/component/status"
+)
+
+// SectionPanel describes one HTMX-loaded section in a stacked layout.
+type SectionPanel struct {
+	ID         string
+	URL        string
+	Trigger    string
+	PreloadMsg string
+}
+
+// SectionPage renders a stacked vertical layout with a back link
+// and one or more HTMX-loaded sections. Unlike DetailPage (sidebar + main),
+// sections span the full content width.
+templ SectionPage(title string, active string, nav policy.Nav, backURL string, backLabel string, panels ...SectionPanel) {
+	@App(title, active, nav) {
+		<!-- Back link -->
+		<div class="mb-6">
+			<a href={ templ.SafeURL(backURL) }
+				class="inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg transition-colors">
+				<span>←</span>
+				<span>{ backLabel }</span>
+			</a>
+		</div>
+
+		<div class="space-y-6">
+			for _, p := range panels {
+				<div
+					id={ p.ID }
+					hx-get={ p.URL }
+					hx-trigger={ p.Trigger }
+					hx-target="this"
+					hx-swap="innerHTML"
+					class="min-h-[120px]"
+				>
+					@status.Preload(p.PreloadMsg)
+				</div>
+			}
+		</div>
+	}
+}

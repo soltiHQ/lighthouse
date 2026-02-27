@@ -58,6 +58,12 @@ type VerifierListResult = ListResult[*model.Verifier]
 // SessionListResult contains a page of session results with pagination support.
 type SessionListResult = ListResult[*model.Session]
 
+// SpecListResult contains a page of task spec results with pagination support.
+type SpecListResult = ListResult[*model.Spec]
+
+// RolloutListResult contains a page of rollout results with pagination support.
+type RolloutListResult = ListResult[*model.Rollout]
+
 // AgentStore defines persistence operations for agent entities.
 type AgentStore interface {
 	// UpsertAgent creates a new agent or replaces an existing one.
@@ -362,12 +368,105 @@ type RoleStore interface {
 	DeleteRole(ctx context.Context, id string) error
 }
 
+// SpecStore defines persistence operations for spec entities.
+type SpecStore interface {
+	// UpsertSpec creates a new spec or replaces an existing one.
+	//
+	// Returns:
+	//   - ErrInvalidArgument if the spec is nil or violates storage-level invariants.
+	//   - ErrUnavailable if the backend is temporarily unavailable.
+	//   - ErrInternal for unexpected storage failures.
+	UpsertSpec(ctx context.Context, ts *model.Spec) error
+
+	// GetSpec retrieves a spec by its unique identifier.
+	//
+	// Returns:
+	//   - ErrNotFound if no spec with the given ID exists.
+	//   - ErrInvalidArgument if the ID is empty or malformed.
+	//   - ErrUnavailable if the backend is temporarily unavailable.
+	//   - ErrInternal for unexpected storage failures.
+	GetSpec(ctx context.Context, id string) (*model.Spec, error)
+
+	// ListSpecs retrieves specs matching the provided filter with pagination support.
+	//
+	// Ordering and cursor contract are defined by ListOptions.
+	//
+	// Returns:
+	//   - ErrInvalidArgument if the filter type is incompatible or the cursor is malformed.
+	//   - ErrUnavailable if the backend is temporarily unavailable.
+	//   - ErrInternal for unexpected storage failures.
+	ListSpecs(ctx context.Context, filter SpecFilter, opts ListOptions) (*SpecListResult, error)
+
+	// DeleteSpec removes a spec by its unique identifier.
+	//
+	// Returns:
+	//   - ErrNotFound if no spec with the given ID exists.
+	//   - ErrInvalidArgument if the ID is empty or malformed.
+	//   - ErrUnavailable if the backend is temporarily unavailable.
+	//   - ErrInternal for unexpected storage failures.
+	DeleteSpec(ctx context.Context, id string) error
+}
+
+// RolloutStore defines persistence operations for rollout entities.
+//
+// A rollout (model.Rollout) tracks the delivery state of a single Spec
+// on a specific agent: desired vs actual version, sync status, and attempts.
+type RolloutStore interface {
+	// UpsertRollout creates a new rollout or replaces an existing one.
+	//
+	// Returns:
+	//   - ErrInvalidArgument if the rollout is nil or violates storage-level invariants.
+	//   - ErrUnavailable if the backend is temporarily unavailable.
+	//   - ErrInternal for unexpected storage failures.
+	UpsertRollout(ctx context.Context, ss *model.Rollout) error
+
+	// GetRollout retrieves a rollout by its unique identifier.
+	//
+	// Returns:
+	//   - ErrNotFound if no rollout with the given ID exists.
+	//   - ErrInvalidArgument if the ID is empty or malformed.
+	//   - ErrUnavailable if the backend is temporarily unavailable.
+	//   - ErrInternal for unexpected storage failures.
+	GetRollout(ctx context.Context, id string) (*model.Rollout, error)
+
+	// ListRollouts retrieves rollouts matching the provided filter with pagination support.
+	//
+	// Ordering and cursor contract are defined by ListOptions.
+	//
+	// Returns:
+	//   - ErrInvalidArgument if the filter type is incompatible or the cursor is malformed.
+	//   - ErrUnavailable if the backend is temporarily unavailable.
+	//   - ErrInternal for unexpected storage failures.
+	ListRollouts(ctx context.Context, filter RolloutFilter, opts ListOptions) (*RolloutListResult, error)
+
+	// DeleteRollout removes a rollout by its unique identifier.
+	//
+	// Returns:
+	//   - ErrNotFound if no rollout with the given ID exists.
+	//   - ErrInvalidArgument if the ID is empty or malformed.
+	//   - ErrUnavailable if the backend is temporarily unavailable.
+	//   - ErrInternal for unexpected storage failures.
+	DeleteRollout(ctx context.Context, id string) error
+
+	// DeleteRolloutsBySpec removes all rollouts associated with a given spec.
+	//
+	// Idempotent: if no rollouts exist for the spec, the operation is a no-op.
+	//
+	// Returns:
+	//   - ErrInvalidArgument if specID is empty.
+	//   - ErrUnavailable if the backend is temporarily unavailable.
+	//   - ErrInternal for unexpected storage failures.
+	DeleteRolloutsBySpec(ctx context.Context, specID string) error
+}
+
 // Storage aggregates all storage capabilities for domain entities.
 type Storage interface {
 	CredentialStore
 	VerifierStore
 	SessionStore
+	RolloutStore
 	AgentStore
 	RoleStore
 	UserStore
+	SpecStore
 }

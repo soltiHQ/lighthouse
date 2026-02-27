@@ -7,14 +7,16 @@ import (
 
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+
+	"github.com/soltiHQ/control-plane/internal/transport/grpc/status"
 
 	discoveryv1 "github.com/soltiHQ/control-plane/api/discovery/v1"
-	genv1 "github.com/soltiHQ/control-plane/domain/gen/v1"
+	genv1 "github.com/soltiHQ/control-plane/api/gen/v1"
 	"github.com/soltiHQ/control-plane/domain/model"
 	"github.com/soltiHQ/control-plane/internal/service/agent"
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
 	"github.com/soltiHQ/control-plane/internal/transport/http/response"
+	"github.com/soltiHQ/control-plane/internal/transport/httpctx"
 )
 
 // HTTPDiscovery handles agent discovery over HTTP.
@@ -36,7 +38,7 @@ func NewHTTPDiscovery(logger zerolog.Logger, agentSVC *agent.Service) *HTTPDisco
 
 // Sync handles POST /api/v1/discovery/sync.
 func (h *HTTPDiscovery) Sync(w http.ResponseWriter, r *http.Request) {
-	mode := response.ModeFromRequest(r)
+	mode := httpctx.ModeFromRequest(r)
 
 	if r.Method != http.MethodPost {
 		response.NotAllowed(w, r, mode)
@@ -50,15 +52,19 @@ func (h *HTTPDiscovery) Sync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logger.Debug().
-		Str("agent_id", in.ID).
-		Str("name", in.Name).
-		Str("endpoint", in.Endpoint).
-		Int("endpoint_type", in.EndpointType).
-		Int("api_version", in.APIVersion).
-		Msg("sync request received")
-
-	a, err := model.NewAgentFromSync(&in)
+	a, err := model.NewAgentFrom(model.AgentParams{
+		ID:                 in.ID,
+		Name:               in.Name,
+		Endpoint:           in.Endpoint,
+		EndpointType:       in.EndpointType,
+		APIVersion:         in.APIVersion,
+		OS:                 in.OS,
+		Arch:               in.Arch,
+		Platform:           in.Platform,
+		UptimeSeconds:      in.UptimeSeconds,
+		HeartbeatIntervalS: in.HeartbeatIntervalS,
+		Metadata:           in.Metadata,
+	})
 	if err != nil {
 		h.logger.Warn().Err(err).
 			Str("agent_id", in.ID).
@@ -68,13 +74,11 @@ func (h *HTTPDiscovery) Sync(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, r, mode)
 		return
 	}
-
 	if err = h.agentSVC.Upsert(r.Context(), a); err != nil {
 		h.logger.Error().Err(err).Str("agent_id", in.ID).Msg("upsert failed")
 		response.Unavailable(w, r, mode)
 		return
 	}
-
 	response.OK(w, r, mode, &responder.View{
 		Data: discoveryv1.SyncResponse{Success: true},
 	})
@@ -100,16 +104,27 @@ func NewGRPCDiscovery(logger zerolog.Logger, agentSVC *agent.Service) *GRPCDisco
 
 // Sync implements genv1.DiscoverServiceServer.
 func (g *GRPCDiscovery) Sync(ctx context.Context, req *genv1.SyncRequest) (*genv1.SyncResponse, error) {
-	a, err := model.NewAgentFromProto(req)
+	a, err := model.NewAgentFrom(model.AgentParams{
+		ID:                 req.GetId(),
+		Name:               req.GetName(),
+		Endpoint:           req.GetEndpoint(),
+		EndpointType:       int(req.GetEndpointType()),
+		APIVersion:         int(req.GetApiVersion()),
+		OS:                 req.GetOs(),
+		Arch:               req.GetArch(),
+		Platform:           req.GetPlatform(),
+		UptimeSeconds:      req.GetUptimeSeconds(),
+		HeartbeatIntervalS: int(req.GetHeartbeatIntervalS()),
+		Metadata:           req.GetMetadata(),
+	})
 	if err != nil {
 		g.logger.Warn().Err(err).Msg("invalid sync request")
-		return nil, status.Errorf(codes.InvalidArgument, "invalid agent data: %v", err)
+		return nil, status.Errorf(ctx, codes.InvalidArgument, "invalid agent data: %v", err)
 	}
 
 	if err = g.agentSVC.Upsert(ctx, a); err != nil {
 		g.logger.Error().Err(err).Str("agent_id", req.GetId()).Msg("upsert failed")
-		return nil, status.Errorf(codes.Internal, "upsert failed")
+		return nil, status.FromError(ctx, err).Err()
 	}
-
 	return &genv1.SyncResponse{Success: true}, nil
 }

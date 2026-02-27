@@ -1,0 +1,26 @@
+package spec
+
+import (
+	"github.com/soltiHQ/control-plane/internal/uikit/policy"
+	"github.com/soltiHQ/control-plane/internal/uikit/routepath"
+	"github.com/soltiHQ/control-plane/internal/uikit/trigger"
+	"github.com/soltiHQ/control-plane/ui/templates/layout"
+)
+
+// Detail renders the spec detail page with stacked full-width sections.
+templ Detail(nav policy.Nav, specID string) {
+	@layout.SectionPage("Spec", "tasks", nav, routepath.PageSpecs, "Back to Specs",
+		layout.SectionPanel{
+			ID:         "spec-identity",
+			URL:        routepath.ApiSpecByID(specID),
+			Trigger:    "load, " + trigger.Every1m + ", " + trigger.SpecUpdate + " from:body",
+			PreloadMsg: "Loading spec...",
+		},
+		layout.SectionPanel{
+			ID:         "spec-rollouts",
+			URL:        routepath.ApiSpecSync(specID),
+			Trigger:    "load, " + trigger.SpecsRefresh + ", " + trigger.SpecUpdate + " from:body",
+			PreloadMsg: "Loading rollouts...",
+		},
+	)
+}

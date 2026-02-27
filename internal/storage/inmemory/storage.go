@@ -12,13 +12,15 @@ import (
 
 // Compile-time checks that Store implements the required interfaces.
 var (
-	_ storage.Storage         = (*Store)(nil)
-	_ storage.AgentStore      = (*Store)(nil)
-	_ storage.UserStore       = (*Store)(nil)
+	_ storage.Storage        = (*Store)(nil)
+	_ storage.AgentStore     = (*Store)(nil)
+	_ storage.UserStore      = (*Store)(nil)
 	_ storage.CredentialStore = (*Store)(nil)
-	_ storage.RoleStore       = (*Store)(nil)
-	_ storage.VerifierStore   = (*Store)(nil)
-	_ storage.SessionStore    = (*Store)(nil)
+	_ storage.RoleStore      = (*Store)(nil)
+	_ storage.VerifierStore  = (*Store)(nil)
+	_ storage.SessionStore   = (*Store)(nil)
+	_ storage.SpecStore  = (*Store)(nil)
+	_ storage.RolloutStore = (*Store)(nil)
 )
 
 // Store provides an in-memory implementation of storage.Storage using GenericStore.
@@ -29,6 +31,8 @@ type Store struct {
 	credentials *GenericStore[*model.Credential]
 	verifiers   *GenericStore[*model.Verifier]
 	sessions    *GenericStore[*model.Session]
+	specs   *GenericStore[*model.Spec]
+	rollouts *GenericStore[*model.Rollout]
 }
 
 // New creates a new in-memory store with an empty state.
@@ -40,6 +44,8 @@ func New() *Store {
 		credentials: NewGenericStore[*model.Credential](),
 		verifiers:   NewGenericStore[*model.Verifier](),
 		sessions:    NewGenericStore[*model.Session](),
+		specs:   NewGenericStore[*model.Spec](),
+		rollouts: NewGenericStore[*model.Rollout](),
 	}
 }
 
@@ -477,4 +483,84 @@ func (s *Store) ListRoles(ctx context.Context, filter storage.RoleFilter, opts s
 
 func (s *Store) DeleteRole(ctx context.Context, id string) error {
 	return s.roles.Delete(ctx, id)
+}
+
+// --- Specs ---
+
+func (s *Store) UpsertSpec(ctx context.Context, ts *model.Spec) error {
+	if ts == nil {
+		return storage.ErrInvalidArgument
+	}
+	return s.specs.Upsert(ctx, ts)
+}
+
+func (s *Store) GetSpec(ctx context.Context, id string) (*model.Spec, error) {
+	return s.specs.Get(ctx, id)
+}
+
+func (s *Store) ListSpecs(ctx context.Context, filter storage.SpecFilter, opts storage.ListOptions) (*storage.SpecListResult, error) {
+	var predicate func(*model.Spec) bool
+
+	if filter != nil {
+		f, ok := filter.(*SpecFilter)
+		if !ok {
+			return nil, storage.ErrInvalidArgument
+		}
+		predicate = f.Matches
+	}
+	return s.specs.List(ctx, predicate, opts)
+}
+
+func (s *Store) DeleteSpec(ctx context.Context, id string) error {
+	return s.specs.Delete(ctx, id)
+}
+
+// --- Rollouts ---
+
+func (s *Store) UpsertRollout(ctx context.Context, ss *model.Rollout) error {
+	if ss == nil {
+		return storage.ErrInvalidArgument
+	}
+	return s.rollouts.Upsert(ctx, ss)
+}
+
+func (s *Store) GetRollout(ctx context.Context, id string) (*model.Rollout, error) {
+	return s.rollouts.Get(ctx, id)
+}
+
+func (s *Store) ListRollouts(ctx context.Context, filter storage.RolloutFilter, opts storage.ListOptions) (*storage.RolloutListResult, error) {
+	var predicate func(*model.Rollout) bool
+
+	if filter != nil {
+		f, ok := filter.(*RolloutFilter)
+		if !ok {
+			return nil, storage.ErrInvalidArgument
+		}
+		predicate = f.Matches
+	}
+	return s.rollouts.List(ctx, predicate, opts)
+}
+
+func (s *Store) DeleteRollout(ctx context.Context, id string) error {
+	return s.rollouts.Delete(ctx, id)
+}
+
+func (s *Store) DeleteRolloutsBySpec(ctx context.Context, specID string) error {
+	if specID == "" {
+		return storage.ErrInvalidArgument
+	}
+
+	s.rollouts.mu.RLock()
+	ids := make([]string, 0)
+	for id, ss := range s.rollouts.data {
+		if ss.SpecID() == specID {
+			ids = append(ids, id)
+		}
+	}
+	s.rollouts.mu.RUnlock()
+
+	for _, id := range ids {
+		_ = s.rollouts.Delete(ctx, id)
+	}
+	return nil
 }

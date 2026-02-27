@@ -1,0 +1,24 @@
+package spec
+
+import (
+	"github.com/soltiHQ/control-plane/internal/uikit/policy"
+	"github.com/soltiHQ/control-plane/internal/uikit/routepath"
+	"github.com/soltiHQ/control-plane/ui/templates/layout"
+	contentSpec "github.com/soltiHQ/control-plane/ui/templates/content/spec"
+)
+
+// New renders the full-page spec builder.
+templ New(nav policy.Nav) {
+	@layout.App("New Spec", "tasks", nav) {
+		<!-- Back link -->
+		<div class="mb-6">
+			<a href={ templ.SafeURL(routepath.PageSpecs) }
+				class="inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg transition-colors">
+				<span>←</span>
+				<span>Back to Specs</span>
+			</a>
+		</div>
+
+		@contentSpec.BuilderPage()
+	}
+}

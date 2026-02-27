@@ -14,7 +14,6 @@ func NewRequestID() string {
 }
 
 // NormalizeRequestID trims and validates a request id.
-// Returns empty string if it should be treated as missing.
 func NormalizeRequestID(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {

@@ -3,9 +3,7 @@ package model
 import (
 	"time"
 
-	discoveryv1 "github.com/soltiHQ/control-plane/api/discovery/v1"
 	"github.com/soltiHQ/control-plane/domain"
-	genv1 "github.com/soltiHQ/control-plane/domain/gen/v1"
 	"github.com/soltiHQ/control-plane/domain/kind"
 )
 
@@ -35,6 +33,10 @@ type Agent struct {
 	platform     string
 
 	uptimeSeconds int64
+
+	status            kind.AgentStatus
+	lastSeenAt        time.Time
+	heartbeatInterval time.Duration
 }
 
 // NewAgent creates a new agent domain entity.
@@ -44,8 +46,9 @@ func NewAgent(id, name, endpoint string) (*Agent, error) {
 	}
 	now := time.Now()
 	return &Agent{
-		createdAt: now,
-		updatedAt: now,
+		createdAt:  now,
+		updatedAt:  now,
+		lastSeenAt: now,
 
 		id:       id,
 		name:     name,
@@ -53,30 +56,48 @@ func NewAgent(id, name, endpoint string) (*Agent, error) {
 
 		metadata: make(map[string]string),
 		labels:   make(map[string]string),
+
+		status: kind.AgentStatusActive,
 	}, nil
 }
 
-// NewAgentFromSync constructs an Agent from an HTTP discovery SyncRequest.
+// AgentParams is a transport-agnostic set of fields for constructing an Agent
+// from an external discovery payload (HTTP or gRPC).
+type AgentParams struct {
+	ID       string
+	Name     string
+	Endpoint string
+
+	EndpointType int
+	APIVersion   int
+
+	OS       string
+	Arch     string
+	Platform string
+
+	UptimeSeconds      int64
+	HeartbeatIntervalS int
+
+	Metadata map[string]string
+}
+
+// NewAgentFrom constructs an Agent from transport-agnostic AgentParams.
 //
-// This method performs defensive copies of maps and does NOT keep references to the input.
-func NewAgentFromSync(in *discoveryv1.SyncRequest) (*Agent, error) {
-	if in == nil {
-		return nil, domain.ErrNilSyncRequest
-	}
-	if in.ID == "" {
+// Performs a defensive copy of Metadata.
+func NewAgentFrom(p AgentParams) (*Agent, error) {
+	if p.ID == "" {
 		return nil, domain.ErrEmptyID
 	}
 
-	var (
-		now = time.Now()
-		md  = make(map[string]string, len(in.Metadata))
-	)
-	for k, v := range in.Metadata {
-		md[k] = v
-	}
-	epType, err := kind.EndpointTypeFromInt(in.EndpointType)
+	epType, err := kind.EndpointTypeFromInt(p.EndpointType)
 	if err != nil {
 		return nil, err
+	}
+
+	now := time.Now()
+	md := make(map[string]string, len(p.Metadata))
+	for k, v := range p.Metadata {
+		md[k] = v
 	}
 
 	return &Agent{
@@ -86,59 +107,20 @@ func NewAgentFromSync(in *discoveryv1.SyncRequest) (*Agent, error) {
 		metadata: md,
 		labels:   make(map[string]string),
 
-		id:           in.ID,
-		name:         in.Name,
-		endpoint:     in.Endpoint,
+		id:           p.ID,
+		name:         p.Name,
+		endpoint:     p.Endpoint,
 		endpointType: epType,
-		apiVersion:   kind.APIVersionFromInt(in.APIVersion),
-		os:           in.OS,
-		arch:         in.Arch,
-		platform:     in.Platform,
+		apiVersion:   kind.APIVersionFromInt(p.APIVersion),
+		os:           p.OS,
+		arch:         p.Arch,
+		platform:     p.Platform,
 
-		uptimeSeconds: in.UptimeSeconds,
-	}, nil
-}
+		uptimeSeconds: p.UptimeSeconds,
 
-// NewAgentFromProto constructs an Agent from a gRPC SyncRequest.
-//
-// This method performs defensive copies of maps and does NOT keep references to the proto object.
-func NewAgentFromProto(req *genv1.SyncRequest) (*Agent, error) {
-	if req == nil {
-		return nil, domain.ErrNilSyncRequest
-	}
-	if req.Id == "" {
-		return nil, domain.ErrEmptyID
-	}
-
-	var (
-		now = time.Now()
-		md  = make(map[string]string, len(req.Metadata))
-	)
-	for k, v := range req.Metadata {
-		md[k] = v
-	}
-	epType, err := kind.EndpointTypeFromInt(int(req.EndpointType))
-	if err != nil {
-		return nil, err
-	}
-
-	return &Agent{
-		createdAt: now,
-		updatedAt: now,
-
-		metadata: md,
-		labels:   make(map[string]string),
-
-		id:           req.Id,
-		name:         req.Name,
-		endpoint:     req.Endpoint,
-		endpointType: epType,
-		apiVersion:   kind.APIVersionFromInt(int(req.ApiVersion)),
-		os:           req.Os,
-		arch:         req.Arch,
-		platform:     req.Platform,
-
-		uptimeSeconds: req.UptimeSeconds,
+		status:            kind.AgentStatusActive,
+		lastSeenAt:        now,
+		heartbeatInterval: time.Duration(p.HeartbeatIntervalS) * time.Second,
 	}, nil
 }
 
@@ -168,6 +150,24 @@ func (a *Agent) Arch() string { return a.arch }
 
 // Platform returns the agent's platform.
 func (a *Agent) Platform() string { return a.platform }
+
+// Status returns the agent's lifecycle status.
+func (a *Agent) Status() kind.AgentStatus { return a.status }
+
+// LastSeenAt returns the timestamp of the agent's last successful sync.
+func (a *Agent) LastSeenAt() time.Time { return a.lastSeenAt }
+
+// HeartbeatInterval returns the agent-reported heartbeat interval.
+func (a *Agent) HeartbeatInterval() time.Duration { return a.heartbeatInterval }
+
+// SetStatus updates the agent's lifecycle status.
+func (a *Agent) SetStatus(s kind.AgentStatus) {
+	a.status = s
+	a.updatedAt = time.Now()
+}
+
+// SetHeartbeatInterval sets the agent's heartbeat interval.
+func (a *Agent) SetHeartbeatInterval(d time.Duration) { a.heartbeatInterval = d }
 
 // CreatedAt returns the creation timestamp.
 func (a *Agent) CreatedAt() time.Time { return a.createdAt }
@@ -250,5 +250,9 @@ func (a *Agent) Clone() *Agent {
 		platform:     a.platform,
 
 		uptimeSeconds: a.uptimeSeconds,
+
+		status:            a.status,
+		lastSeenAt:        a.lastSeenAt,
+		heartbeatInterval: a.heartbeatInterval,
 	}
 }

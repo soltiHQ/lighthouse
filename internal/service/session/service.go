@@ -1,3 +1,7 @@
+// Package session implements session management use-cases:
+//   - Retrieval and listing by user
+//   - Single and bulk deletion
+//   - Session revocation.
 package session
 
 import (
@@ -5,7 +9,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/soltiHQ/control-plane/domain/model"
 
 	"github.com/soltiHQ/control-plane/internal/service"
@@ -14,19 +17,15 @@ import (
 
 // Service implements session-related use-cases on top of storage contracts.
 type Service struct {
-	logger zerolog.Logger
-	store  storage.SessionStore
+	store storage.SessionStore
 }
 
 // New creates a new sessions service.
-func New(store storage.SessionStore, logger zerolog.Logger) *Service {
+func New(store storage.SessionStore) *Service {
 	if store == nil {
 		panic("session.Service: store is nil")
 	}
-	return &Service{
-		logger: logger.With().Str("service", "sessions").Logger(),
-		store:  store,
-	}
+	return &Service{store: store}
 }
 
 // Get returns a single session by ID.

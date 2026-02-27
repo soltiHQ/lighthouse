@@ -23,4 +23,8 @@ var (
 	ErrListTasks = errors.New("proxy: grpc list tasks")
 	// ErrUnsupportedAPIVersion indicates the agent reported an unknown API version.
 	ErrUnsupportedAPIVersion = errors.New("proxy: unsupported api version")
+	// ErrSubmitTask indicates a task submission call failed.
+	ErrSubmitTask = errors.New("proxy: submit task")
+	// ErrExportSpecs indicates an export call failed.
+	ErrExportSpecs = errors.New("proxy: export task specs")
 )

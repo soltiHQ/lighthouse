@@ -1,26 +1,22 @@
 package httpctx
 
-import "context"
+import "net/http"
 
-// RenderMode defines how an HTTP response should be rendered.
+// RenderMode tells response helpers whether to render a full HTML page or an HTMX fragment (block).
 type RenderMode int
 
 const (
+	// RenderPage is a full page render (browser navigation).
 	RenderPage RenderMode = iota
+	// RenderBlock is a partial fragment render (HTMX swap).
 	RenderBlock
 )
 
-type renderModeKey struct{}
-
-// WithRenderMode stores response render mode in ctx.
-func WithRenderMode(ctx context.Context, m RenderMode) context.Context {
-	return context.WithValue(ctx, renderModeKey{}, m)
-}
-
-// Mode returns render mode from ctx, or default RenderPage.
-func Mode(ctx context.Context) RenderMode {
-	if m, ok := ctx.Value(renderModeKey{}).(RenderMode); ok {
-		return m
+// ModeFromRequest derives RenderMode from the incoming request.
+// HTMX requests (HX-Request: true) produce RenderBlock, everything else — RenderPage.
+func ModeFromRequest(r *http.Request) RenderMode {
+	if r != nil && r.Header.Get("HX-Request") == "true" {
+		return RenderBlock
 	}
 	return RenderPage
 }

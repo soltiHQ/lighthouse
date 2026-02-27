@@ -1,3 +1,5 @@
+// Package transportctx provides transport-agnostic context values shared by
+// HTTP middleware, gRPC interceptors, handlers, and loggers.
 package transportctx
 
 import (
@@ -6,7 +8,6 @@ import (
 	"github.com/soltiHQ/control-plane/internal/auth/identity"
 )
 
-// Typed keys (unexported) prevent collisions with other context users.
 type (
 	identityKey  struct{}
 	requestIDKey struct{}
@@ -15,13 +16,11 @@ type (
 const unknownRequestID = "unknown"
 
 // WithIdentity stores authenticated identity in ctx.
-// Passing nil clears the identity value (returns a derived context anyway).
 func WithIdentity(ctx context.Context, id *identity.Identity) context.Context {
 	return context.WithValue(ctx, identityKey{}, id)
 }
 
 // WithRequestID stores request id in ctx.
-// RequestID should be stable per request, suitable for log correlation.
 func WithRequestID(ctx context.Context, requestID string) context.Context {
 	return context.WithValue(ctx, requestIDKey{}, requestID)
 }
