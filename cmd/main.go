@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 
-	genv1 "github.com/soltiHQ/control-plane/domain/gen/v1"
+	genv1 "github.com/soltiHQ/control-plane/api/gen/v1"
 	"github.com/soltiHQ/control-plane/domain/kind"
 	"github.com/soltiHQ/control-plane/domain/model"
 	"github.com/soltiHQ/control-plane/internal/auth/credentials"

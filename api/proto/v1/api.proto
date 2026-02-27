@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package solti.api.v1;
 
-option go_package = "github.com/soltiHQ/control-plane/domain/gen/v1;genv1";
+option go_package = "github.com/soltiHQ/control-plane/api/gen/v1;genv1";
 
 // Task execution state.
 enum TaskStatus {

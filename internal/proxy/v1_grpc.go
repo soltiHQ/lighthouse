@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	genv1 "github.com/soltiHQ/control-plane/api/gen/v1"
 	proxyv1 "github.com/soltiHQ/control-plane/api/proxy/v1"
-	genv1 "github.com/soltiHQ/control-plane/domain/gen/v1"
 	"google.golang.org/grpc"
 )
 

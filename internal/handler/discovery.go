@@ -11,7 +11,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/transport/grpc/status"
 
 	discoveryv1 "github.com/soltiHQ/control-plane/api/discovery/v1"
-	genv1 "github.com/soltiHQ/control-plane/domain/gen/v1"
+	genv1 "github.com/soltiHQ/control-plane/api/gen/v1"
 	"github.com/soltiHQ/control-plane/domain/model"
 	"github.com/soltiHQ/control-plane/internal/service/agent"
 	"github.com/soltiHQ/control-plane/internal/transport/http/responder"
@@ -52,7 +52,19 @@ func (h *HTTPDiscovery) Sync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a, err := model.NewAgentFromSync(&in)
+	a, err := model.NewAgentFrom(model.AgentParams{
+		ID:                 in.ID,
+		Name:               in.Name,
+		Endpoint:           in.Endpoint,
+		EndpointType:       in.EndpointType,
+		APIVersion:         in.APIVersion,
+		OS:                 in.OS,
+		Arch:               in.Arch,
+		Platform:           in.Platform,
+		UptimeSeconds:      in.UptimeSeconds,
+		HeartbeatIntervalS: in.HeartbeatIntervalS,
+		Metadata:           in.Metadata,
+	})
 	if err != nil {
 		h.logger.Warn().Err(err).
 			Str("agent_id", in.ID).
@@ -92,7 +104,19 @@ func NewGRPCDiscovery(logger zerolog.Logger, agentSVC *agent.Service) *GRPCDisco
 
 // Sync implements genv1.DiscoverServiceServer.
 func (g *GRPCDiscovery) Sync(ctx context.Context, req *genv1.SyncRequest) (*genv1.SyncResponse, error) {
-	a, err := model.NewAgentFromProto(req)
+	a, err := model.NewAgentFrom(model.AgentParams{
+		ID:                 req.GetId(),
+		Name:               req.GetName(),
+		Endpoint:           req.GetEndpoint(),
+		EndpointType:       int(req.GetEndpointType()),
+		APIVersion:         int(req.GetApiVersion()),
+		OS:                 req.GetOs(),
+		Arch:               req.GetArch(),
+		Platform:           req.GetPlatform(),
+		UptimeSeconds:      req.GetUptimeSeconds(),
+		HeartbeatIntervalS: int(req.GetHeartbeatIntervalS()),
+		Metadata:           req.GetMetadata(),
+	})
 	if err != nil {
 		g.logger.Warn().Err(err).Msg("invalid sync request")
 		return nil, status.Errorf(ctx, codes.InvalidArgument, "invalid agent data: %v", err)
