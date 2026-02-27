@@ -7,17 +7,17 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/layout"
 )
 
-// Detail renders the task spec detail page with sidebar + rollout panels.
+// Detail renders the spec detail page with stacked full-width sections.
 templ Detail(nav policy.Nav, specID string) {
-	@layout.DetailPage("Task Spec", "tasks", nav,
-		layout.DetailPanel{
-			ID:         "taskspec-identity",
+	@layout.SectionPage("Spec", "tasks", nav, routepath.PageSpecs, "Back to Specs",
+		layout.SectionPanel{
+			ID:         "spec-identity",
 			URL:        routepath.ApiSpecByID(specID),
 			Trigger:    "load, " + trigger.Every1m + ", " + trigger.SpecUpdate + " from:body",
-			PreloadMsg: "Details Loading...",
+			PreloadMsg: "Loading spec...",
 		},
-		layout.DetailPanel{
-			ID:         "taskspec-rollouts",
+		layout.SectionPanel{
+			ID:         "spec-rollouts",
 			URL:        routepath.ApiSpecSync(specID),
 			Trigger:    "load, " + trigger.SpecsRefresh + ", " + trigger.SpecUpdate + " from:body",
 			PreloadMsg: "Loading rollouts...",

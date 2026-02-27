@@ -11,77 +11,103 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/asset"
 	"github.com/soltiHQ/control-plane/ui/templates/component/button"
 	"github.com/soltiHQ/control-plane/ui/templates/component/card"
+	"github.com/soltiHQ/control-plane/ui/templates/component/modal"
 	"github.com/soltiHQ/control-plane/ui/templates/component/status"
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
-// Detail renders the task spec identity card with action buttons.
+// Detail renders the spec identity section: header with actions,
+// properties grid, and CreateSpec JSON preview.
 templ Detail(ts restv1.RolloutSpec, p policy.SpecDetail) {
-	@card.Card("") {
-		@card.CardBody() {
-			<div class="space-y-6">
-				<div class="space-y-3 min-w-0">
-					<dl class="space-y-3">
-						@visual.KV("ID", ts.ID)
-						@visual.KV("Name", ts.Name)
-						@visual.KV("Slot", ts.Slot)
-						@visual.KV("Kind", ts.KindType)
-						@visual.KV("Timeout", fmt.Sprintf("%dms", ts.TimeoutMs))
-						@visual.KV("Restart", ts.RestartType)
-						if ts.IntervalMs > 0 {
-							@visual.KV("Interval", fmt.Sprintf("%dms", ts.IntervalMs))
-						}
-						@visual.KV("Admission", ts.Admission)
-						@visual.KV("Backoff", fmt.Sprintf("jitter=%s first=%dms max=%dms factor=%.1f",
-							ts.Jitter, ts.BackoffFirstMs, ts.BackoffMaxMs, ts.BackoffFactor))
-						@visual.KV("Version", fmt.Sprintf("%d", ts.Version))
-						if len(ts.Targets) > 0 {
-							@visual.KV("Targets", strings.Join(ts.Targets, ", "))
-						}
-					</dl>
-				</div>
-
-				<!-- CreateSpec JSON -->
-				if len(ts.CreateSpec) > 0 {
-					<div class="pt-3 border-t border-border">
-						<div class="flex items-center justify-between mb-2">
-							<span class="text-[11px] uppercase tracking-[0.05em] text-muted">Agent CreateSpec</span>
-							<button type="button"
-								class="text-[11px] text-primary hover:text-primary/80 transition-colors"
-								onclick={ copySpec(ts.CreateSpec) }>Copy</button>
-						</div>
-						<pre class="text-[13px] font-mono text-fg/80 whitespace-pre-wrap break-words leading-relaxed p-4 rounded-[var(--r-xs)] bg-surface-dim border border-border overflow-x-auto">{ prettyJSON(ts.CreateSpec) }</pre>
+	<div class="space-y-6">
+		<!-- Header: name + version + actions -->
+		@card.Card("") {
+			@card.CardBody() {
+				<div class="flex items-start justify-between gap-4">
+					<div class="min-w-0">
+						<h2 class="text-lg font-semibold text-fg truncate">{ ts.Name }</h2>
+						<div class="text-[11px] font-mono text-muted tracking-wide mt-1">{ ts.ID }</div>
 					</div>
-				}
-			</div>
+					<div class="flex items-center gap-2 shrink-0">
+						@visual.Badge(fmt.Sprintf("v%d", ts.Version), visual.VariantMuted)
+						if p.CanDeploy {
+							@button.Button("Deploy", "button", false, button.VariantPrimary, false,
+								templ.Attributes{"x-data": "", "x-on:click": modal.OpenEvent("deploy-spec")},
+							) {
+								@asset.Icon("tasks")
+							}
+						}
+						if p.CanDelete {
+							@button.Button("Delete", "button", false, button.VariantDanger, false,
+								templ.Attributes{"x-data": "", "x-on:click": modal.OpenEvent("delete-spec")},
+							) {
+								@asset.Icon("delete")
+							}
+						}
+					</div>
+				</div>
+			}
 		}
 
-		@card.CardFooter() {
-			<div class="flex items-center gap-2">
-				if p.CanDeploy {
-					@button.Button("Deploy", "button", false, button.VariantPrimary, false,
-						templ.Attributes{
-							"hx-post":    routepath.ApiSpecDeploy(ts.ID),
-							"hx-swap":    "none",
-							"hx-confirm": "Deploy this task spec to all targets?",
-						},
-					) {
-						@asset.Icon("tasks")
+		<!-- Properties grid -->
+		@card.Card("") {
+			@card.CardBody() {
+				<dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
+					@visual.KV("Slot", ts.Slot)
+					@visual.KV("Kind", ts.KindType)
+					@visual.KV("Timeout", fmt.Sprintf("%dms", ts.TimeoutMs))
+					@visual.KV("Restart", ts.RestartType)
+					if ts.IntervalMs > 0 {
+						@visual.KV("Interval", fmt.Sprintf("%dms", ts.IntervalMs))
 					}
-				}
-				if p.CanDelete {
-					@button.Button("Delete", "button", false, button.VariantDanger, false,
-						templ.Attributes{
-							"hx-delete":  routepath.ApiSpecByID(ts.ID),
-							"hx-swap":    "none",
-							"hx-confirm": "Delete this task spec? This cannot be undone.",
-						},
-					) {
-						@asset.Icon("delete")
+					@visual.KV("Admission", ts.Admission)
+					@visual.KV("Backoff", fmt.Sprintf("jitter=%s first=%dms max=%dms factor=%.1f",
+						ts.Jitter, ts.BackoffFirstMs, ts.BackoffMaxMs, ts.BackoffFactor))
+					if len(ts.Targets) > 0 {
+						@visual.KV("Targets", strings.Join(ts.Targets, ", "))
 					}
-				}
-			</div>
+				</dl>
+			}
 		}
+
+		<!-- CreateSpec JSON -->
+		if len(ts.CreateSpec) > 0 {
+			@card.Card("") {
+				@card.CardBody() {
+					<div class="flex items-center justify-between mb-3">
+						<span class="text-[11px] uppercase tracking-[0.05em] text-muted font-semibold">Agent CreateSpec</span>
+						<button type="button"
+							class="text-[11px] text-primary hover:text-primary/80 transition-colors"
+							onclick={ copySpec(ts.CreateSpec) }>Copy</button>
+					</div>
+					<pre class="text-[13px] font-mono text-fg/80 whitespace-pre-wrap break-words leading-relaxed p-4 rounded-[var(--r-xs)] bg-surface-dim border border-border overflow-x-auto">{ prettyJSON(ts.CreateSpec) }</pre>
+				}
+			}
+		}
+	</div>
+
+	if p.CanDeploy {
+		@modal.Confirm(
+			"deploy-spec",
+			"Deploy spec",
+			"Deploy "+ts.Name+" to all targets? This will create rollouts for every matched agent.",
+			"Deploy",
+			routepath.ApiSpecDeploy(ts.ID),
+			modal.MethodPost,
+			modal.VariantDefault,
+		)
+	}
+
+	if p.CanDelete {
+		@modal.Confirm(
+			"delete-spec",
+			"Delete spec",
+			"Are you sure you want to delete "+ts.Name+"? This action cannot be undone.",
+			"Delete",
+			routepath.ApiSpecByID(ts.ID),
+			modal.MethodDelete,
+			modal.VariantDanger,
+		)
 	}
 }
 
@@ -91,6 +117,7 @@ templ Rollouts(states []restv1.RolloutEntry) {
 		@status.Empty("No rollouts")
 	} else {
 		<div class="space-y-3">
+			<h3 class="text-xs font-semibold uppercase tracking-wider text-muted-strong">Rollouts</h3>
 			for _, ss := range states {
 				@card.Card("") {
 					@card.CardBody() {

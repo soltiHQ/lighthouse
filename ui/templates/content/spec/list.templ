@@ -12,7 +12,7 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/component/visual"
 )
 
-// List renders the paginated task spec list with search and cursor-based loading.
+// List renders the paginated spec list with search and cursor-based loading.
 templ List(items []*model.Spec, nextCursor string, q string) {
 	<div class="space-y-4">
 		<div class="flex justify-center mb-10">
@@ -32,7 +32,7 @@ templ List(items []*model.Spec, nextCursor string, q string) {
 	</div>
 }
 
-// Results is the HTMX-swappable wrapper for the task spec cards + pagination footer.
+// Results is the HTMX-swappable wrapper for the spec cards + pagination footer.
 templ Results(items []*model.Spec, nextCursor string, q string) {
 	<div id="taskspecs-results" class="space-y-4">
 		<div id="taskspecs-cards" class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -45,10 +45,10 @@ templ Results(items []*model.Spec, nextCursor string, q string) {
 	</div>
 }
 
-// Cards renders the grid of task spec item cards.
+// Cards renders the grid of spec item cards.
 templ Cards(items []*model.Spec) {
 	if len(items) == 0 {
-		@status.Empty("No task specs found")
+		@status.Empty("No specs found")
 	} else {
 		for _, ts := range items {
 			@card.Item(routepath.PageSpecInfoByID(ts.ID())) {

@@ -21,7 +21,7 @@ var presets = []backoffPreset{
 	{Label: "Gentle", Jitter: "equal", FirstMs: 2000, MaxMs: 10000, Factor: 1.5},
 }
 
-// builderXData returns the Alpine x-data expression for the task spec builder.
+// builderXData returns the Alpine x-data expression for the spec builder.
 func builderXData(agentsEndpoint string) string {
 	presetsJSON, _ := json.Marshal(presets)
 	return fmt.Sprintf(`{
@@ -136,7 +136,7 @@ fetch('%s', {
     const redirect = r.headers.get('HX-Redirect');
     if (redirect) { window.location.href = redirect; return; }
     show = false;
-    htmx.trigger(document.body, 'taskspec_update');
+    htmx.trigger(document.body, 'spec_update');
   }
 }).catch(() => {}).finally(() => submitting = false)`,
 		strings.ReplaceAll(action, "'", "\\'"),

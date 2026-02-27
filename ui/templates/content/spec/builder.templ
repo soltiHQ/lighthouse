@@ -6,7 +6,7 @@ import (
 	"github.com/soltiHQ/control-plane/ui/templates/component/form"
 )
 
-// BuilderPage renders the full-page split-panel task spec builder.
+// BuilderPage renders the full-page split-panel spec builder.
 // Left: form sections (identity, kind, lifecycle, targets).
 // Right: live JSON preview updated reactively via Alpine.js.
 templ BuilderPage() {
@@ -14,16 +14,16 @@ templ BuilderPage() {
 		x-data={ builderXData(routepath.ApiAgents) }
 		x-init={ builderInitExpr() }
 		x-on:submit.prevent={ builderSubmitExpr(routepath.ApiSpecs) }
-		class="rounded-[var(--r-lg)] border border-border bg-card shadow-3 overflow-hidden"
+		class="rounded-[var(--r-lg)] border border-border bg-card shadow-3 overflow-clip"
 	>
-		<div class="flex flex-col lg:flex-row min-h-[calc(100vh-200px)]">
+		<div class="flex flex-col lg:flex-row">
 			<!-- Left: form -->
-			<div class="flex-1 overflow-y-auto p-6 space-y-6 lg:border-r lg:border-border lg:max-w-[520px]">
-				<h2 class="text-lg font-semibold text-fg">Create Task Spec</h2>
+			<div class="flex-1 p-6 space-y-6 lg:border-r lg:border-border lg:max-w-[520px]">
+				<h2 class="text-lg font-semibold text-fg">Create Spec</h2>
 
 				<!-- Identity -->
 				@builderSection("Identity") {
-					@builderField("name", "Name", "Task spec name", true)
+					@builderField("name", "Name", "Spec name", true)
 					@builderField("slot", "Slot", "e.g. worker-a", true)
 				}
 
@@ -180,17 +180,17 @@ templ BuilderPage() {
 				}
 			</div>
 
-			<!-- Right: JSON preview (sticky) -->
+			<!-- Right: JSON preview (sticky, scrollable) -->
 			<div class="flex-1 p-6 bg-surface-dim hidden lg:block">
-				<div class="sticky top-8">
-					<div class="flex items-center justify-between mb-4">
+				<div class="sticky top-8 max-h-[calc(100vh-120px)] flex flex-col">
+					<div class="flex items-center justify-between mb-4 shrink-0">
 						<h3 class="text-xs font-semibold uppercase tracking-wider text-muted-strong">Live Preview</h3>
 						<button type="button"
 							class="text-xs text-primary hover:text-primary/80 transition-colors"
 							x-on:click="navigator.clipboard.writeText(previewJSON)">Copy JSON</button>
 					</div>
 					<pre
-						class="text-[13px] font-mono text-fg/80 whitespace-pre-wrap break-words leading-relaxed p-4 rounded-[var(--r-xs)] bg-card border border-border"
+						class="text-[13px] font-mono text-fg/80 whitespace-pre-wrap break-words leading-relaxed p-4 rounded-[var(--r-xs)] bg-card border border-border overflow-y-auto min-h-0"
 						x-text="previewJSON"></pre>
 				</div>
 			</div>
@@ -203,7 +203,7 @@ templ BuilderPage() {
 			@button.Button("", "submit", false, button.VariantPrimary, false,
 				templ.Attributes{"x-bind:disabled": "submitting || !name || !slot"},
 			) {
-				<span x-show="!submitting">Create Task Spec</span>
+				<span x-show="!submitting">Create Spec</span>
 				<span x-show="submitting" x-cloak>Creating...</span>
 			}
 		</div>
@@ -270,7 +270,7 @@ templ agentMultiSelect() {
 // kvEditor renders a dynamic key-value pair editor.
 templ kvEditor(rowsVar string) {
 	<div class="space-y-2">
-		<template x-for={ "(" + kvIterExpr(rowsVar) + ")" } :key="idx">
+		<template x-for={ "(" + kvIterExpr(rowsVar) } :key="idx">
 			<div class="flex items-center gap-2">
 				<input type="text" x-model="row.key" placeholder="key"
 					class={ kvInput }/>
