@@ -1,4 +1,4 @@
-package taskspec
+package spec
 
 import (
 	"encoding/json"

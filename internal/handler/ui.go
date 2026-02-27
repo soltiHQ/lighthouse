@@ -22,7 +22,7 @@ import (
 	pageAgent "github.com/soltiHQ/control-plane/ui/templates/page/agent"
 	pageHome "github.com/soltiHQ/control-plane/ui/templates/page/home"
 	pageSystem "github.com/soltiHQ/control-plane/ui/templates/page/system"
-	pageSpec "github.com/soltiHQ/control-plane/ui/templates/page/taskspec"
+	pageSpec "github.com/soltiHQ/control-plane/ui/templates/page/spec"
 	pageUser "github.com/soltiHQ/control-plane/ui/templates/page/user"
 )
 

@@ -34,7 +34,7 @@ import (
 	"github.com/soltiHQ/control-plane/internal/transportctx"
 	"github.com/soltiHQ/control-plane/internal/uikit/policy"
 	contentAgent "github.com/soltiHQ/control-plane/ui/templates/content/agent"
-	contentSpec "github.com/soltiHQ/control-plane/ui/templates/content/taskspec"
+	contentSpec "github.com/soltiHQ/control-plane/ui/templates/content/spec"
 	contentUser "github.com/soltiHQ/control-plane/ui/templates/content/user"
 )
 
